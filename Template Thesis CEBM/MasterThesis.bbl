@@ -1,0 +1,15 @@
+\begin{thebibliography}{1}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\providecommand{\bibinfo}[2]{#2}
+\providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem{rodriguez2005bilateral}
+\bibinfo{author}{Rodriguez-Oroz, M.} \emph{et~al.}
+\newblock \bibinfo{title}{Bilateral deep brain stimulation in parkinson's
+  disease: a multicentre study with 4 years follow-up}.
+\newblock \emph{\bibinfo{journal}{Brain}} \textbf{\bibinfo{volume}{128}},
+  \bibinfo{pages}{2240--2249} (\bibinfo{year}{2005}).
+
+\end{thebibliography}
