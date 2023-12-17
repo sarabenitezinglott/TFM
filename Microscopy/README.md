@@ -14,22 +14,22 @@ For this apprach of identifying yeast cell cycle stages in a video, an GUI-Based
 
 |     tools        |Cell-ACDC|YeaZ|Cellpose|YeastMate|DeepCell|PhyloCell|CellProfiler|ImageJ/Fiji|YeastSpotter|YeastNet|MorphoLibJ|
 |:----------------:|:-------:|:--:|:------:|:-------:|:------:|:-------:|:----------:|:---------:|:----------:|:------:|:--------:|
-| Deep-Learning Segmentation|Y|Y|Y|Y|Y|N|Y|Y |Y |Y|N|
-| Traditional Segmentation|Y|N|N|N|N|Y|Y|Y |N |N|Y|
-| Tracking|Y|Y|N|N|Y|Y|Y|Y|N|N|N|
-|Manual corrections|Y|Y|Y|Y|Y|Y|Y|Y |N|N|Y|
-|Automatick handling of real-time traking|Y|N|N|N |N|N|N|N|N|N|N|
-|Automatic propagation of correction|Y|N|N|N|N|Y|N|N|N|N| N|
-|Automatic mother-bud pairing|Y|N|N|Y|N|Y|N|N|N|N|N|
-|Pedigree Annotation|Y|N|N|Y|Y|Y|Y|Y|N|N|N|
-|Cell Division Annotation|Y|N|N|N|N|Y|Y|Y|N|N|N|
-|Downstream analysis|Y|N|N|N|Y|Y|Y|Y|N|N|N|
-|Supports 3D z-stacks|Y|N|Y|N|Y|N|Y|Y|N|N|Y|
-|Supports multiple model organism|Y|N|Y|N|Y|N|Y|Y|N|N|Y|
-|Supports Bio-formats|Y|N|N|N|N|N|Y|Y|N |N|Y|
-|User manual|Y|Y|Y|Y|Y|N|Y| Y|Y |Y|Y|
+| Deep-Learning Segmentation|Y|Y|Y|Y|Y|-|Y|Y |Y |Y|-|
+| Traditional Segmentation|Y|-|-|-|-|Y|Y|Y |- |-|Y|
+| Tracking|Y|Y|-|-|Y|Y|Y|Y|-|-|-|
+|Manual corrections|Y|Y|Y|Y|Y|Y|Y|Y |-|-|Y|
+|Automatick handling of real-time traking|Y|-|-|- |-|-|-|-|-|-|-|
+|Automatic propagation of correction|Y|-|-|-|-|Y|-|-|-|-| -|
+|Automatic mother-bud pairing|Y|-|-|Y|-|Y|-|-|-|-|-|
+|Pedigree Annotation|Y|-|-|Y|Y|Y|Y|Y|-|-|-|
+|Cell Division Annotation|Y|-|-|-|-|Y|Y|Y|-|-|-|
+|Downstream analysis|Y|-|-|-|Y|Y|Y|Y|-|-|-|
+|Supports 3D z-stacks|Y|-|Y|-|Y|-|Y|Y|-|-|Y|
+|Supports multiple model organism|Y|-|Y|-|Y|-|Y|Y|-|-|Y|
+|Supports Bio-formats|Y|-|-|-|-|-|Y|Y|- |-|Y|
+|User manual|Y|Y|Y|Y|Y|-|Y| Y|Y |Y|Y|
 |Open Source|Y|Y|Y|Y|Y|Y |Y| Y|Y |Y|Y|
-|Not licence requiered|Y| Y |Y|Y |Y | N |Y| Y|Y |Y|Y|
+|Not licence requiered|Y| Y |Y|Y |Y | - |Y| Y|Y |Y|Y|
 
 </p>
 
@@ -47,6 +47,12 @@ This procedure follows different steps:
 1. Launch data prep module.
 2. Launch segmentation module.
 3. Launch GUI.
+
+Regarding the live images different improves can be made:
+- Drift correction --> Fast4DReg ; Correct 3D drift ; ImageJ
+- Denoising and image restoration --> 
+- Super-resolution
+- Artificial Labelling
 
 ## Pipeline 
 
