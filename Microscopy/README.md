@@ -7,16 +7,19 @@
 
 The duration of the cell cycle varies across different species. In the case of _Schizosaccharomyces pombe_ fission yeast, its cell cycle spans 8 hours, making it a preferred choice in numerous research laboratories. This preference stems not only from its distinctive cell cycle length but also from other resemblances it shares with human cells, such us gene structure, chromatin dynamics, prevalence of introns and the gene expression through pre-mRNA splicing, RNAi pathways and epigenetic gene silencing [[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8193909/#:~:text=The%20fission%20yeast%20Schizosaccharomyces%20pombe,budding%20yeast%20Saccharomyces%20cerevisiae%2C%20S.)]. Furthermore, it is crucial for us to ascertain the duration of its cell cycle and to accurately detect the specific stage at which each yeast cell is positioned. In conclusion, this _Schizosaccharomyces pombe_ yeast is well known for its contribution as a model organism for the understanding of regulation and conservation of the eukariotic cell cycle.
 
-For this apprach of identifying yeast cell cycle stages in a video, an GUI-Based Python framework called Cell-ACDC or Cell-Analysis of the Cell Division Cycle, is used. Cell-ACDC is an application which combines the best available neural network models. 
+For this apprach of identifying yeast cell cycle stages in a video, different techniques could be used: 
+- GUI-Based Python framework called Cell-ACDC or Cell-Analysis of the Cell Division Cycle (Cell-ACDC is an application which combines the best available neural network models)
+- R-CNN
 
+## Cell ACDC method
 
 <p align="center">
 
-|     tools        |Cell-ACDC|YeaZ|Cellpose|YeastMate|DeepCell|PhyloCell|CellProfiler|ImageJ/Fiji|YeastSpotter|YeastNet|MorphoLibJ|
+|tools|Cell-ACDC|YeaZ|Cellpose|YeastMate|DeepCell|PhyloCell|CellProfiler|ImageJ/Fiji|YeastSpotter|YeastNet|MorphoLibJ|
 |:----------------:|:-------:|:--:|:------:|:-------:|:------:|:-------:|:----------:|:---------:|:----------:|:------:|:--------:|
-| Deep-Learning Segmentation|Y|Y|Y|Y|Y|-|Y|Y |Y |Y|-|
-| Traditional Segmentation|Y|-|-|-|-|Y|Y|Y |- |-|Y|
-| Tracking|Y|Y|-|-|Y|Y|Y|Y|-|-|-|
+|Deep-Learning Segmentation|Y|Y|Y|Y|Y|-|Y|Y |Y |Y|-|
+|Traditional Segmentation|Y|-|-|-|-|Y|Y|Y |- |-|Y|
+|Tracking|Y|Y|-|-|Y|Y|Y|Y|-|-|-|
 |Manual corrections|Y|Y|Y|Y|Y|Y|Y|Y |-|-|Y|
 |Automatick handling of real-time traking|Y|-|-|- |-|-|-|-|-|-|-|
 |Automatic propagation of correction|Y|-|-|-|-|Y|-|-|-|-| -|
@@ -35,18 +38,18 @@ For this apprach of identifying yeast cell cycle stages in a video, an GUI-Based
 
 Cell-ACDC automatically computes several single-cell numerical features such as cell area and cell volume, plus the mean, max, median, sum and quantiles of any additional fluorescent channel's signal. It even performs background correction, to compute the protein amount and concentration.
 
+## R-CNN method
+
+[github steps](https://github.com/matterport/Mask_RCNN)
+
 ## Aims
 
 Identify the cell stage of each yeast in the video and tally the number of cell divisions from the initial ones.
 
 ## Challenges Faced 
+Importing the videos:
+- .czi files 
 
-This procedure follows different steps:
-
-0. Create data structure from microscopy/image file(s).
-1. Launch data prep module.
-2. Launch segmentation module.
-3. Launch GUI.
 
 Regarding the live images different improves can be made:
 - Drift correction --> Fast4DReg ; Correct 3D drift ; ImageJ
