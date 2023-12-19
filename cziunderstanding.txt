@@ -1,0 +1,32 @@
+Understanding the .czi file. 
+
+For this aim, **metadata information** from each czi has to be extracted.
+In Windows different softwares can be used for this apporach, such as: **Image J**, ZEN or NetScope.  
+
+3288-1.czi file contains:
+- 3 channels:
+    {   c0
+            NamemCher-T1/Name
+            Index0/Index
+            ChannelProcesssingModeProcessChannel/ChannelProcessingMode
+            Represents: 
+                Pcn1: nuclei -> DNA synthesis               
+                RitC: membrane
+
+        /c0
+        c1
+            NamemNeonGreen-T2/Name
+            Index1/Index
+            ChannelProcessingModeProcessChannel/ChannelProcessingMode
+            Represents: 
+                SynCut3: translocation to nucleus -> mitosis entry
+        /c1
+        c2
+            NameEBFP2-T3/Name
+            Index2/Index
+            ChannelProcessingModeProcessChannel/ChannelProcessingMode
+            Represents: 
+                Sid2: spindle pole body and early sepation
+        /c2
+    }
+-

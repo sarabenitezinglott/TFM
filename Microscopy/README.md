@@ -48,7 +48,7 @@ Identify the cell stage of each yeast in the video and tally the number of cell 
 
 ## Challenges Faced 
 Importing the videos:
-- .czi files 
+- .czi files (Microscope Image data file). Not a BioFormat neither a AICSImageIO, which are the file type necessary for cell-ACDC.
 
 
 Regarding the live images different improves can be made:
