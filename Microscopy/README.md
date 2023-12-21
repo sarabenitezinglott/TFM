@@ -1,6 +1,5 @@
 <h1 style="text-align: center;"> Splicing regulation during meiosis </h1>
 <h3 style="text-align: center;"> Oxidative Stress and Cell Cycle Research Group - PRBB </h3>
-<h4 style="text-align: center;"> Sara del Carmen Benítez-Inglott González </h4>
 
 # Approach 1: Splicing regulation in each cell cycle phase
 ## Introduction 
