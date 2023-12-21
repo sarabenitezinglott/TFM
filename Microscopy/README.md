@@ -1,8 +1,8 @@
-<h1 style="text-align: center;"> Approach 2: AI-Based Detection of Yeast Cell Cycle Stages </h1>
+<h1 style="text-align: center;"> Splicing regulation during meiosis </h1>
 <h3 style="text-align: center;"> Oxidative Stress and Cell Cycle Research Group - PRBB </h3>
 <h4 style="text-align: center;"> Sara del Carmen Benítez-Inglott González </h4>
 
-
+# Approach 2: AI-Based Detection of Yeast Cell Cycle Stages
 ## Introduction 
 
 The duration of the cell cycle varies across different species. In the case of _Schizosaccharomyces pombe_ fission yeast, its cell cycle spans 8 hours, making it a preferred choice in numerous research laboratories. This preference stems not only from its distinctive cell cycle length but also from other resemblances it shares with human cells, such us gene structure, chromatin dynamics, prevalence of introns and the gene expression through pre-mRNA splicing, RNAi pathways and epigenetic gene silencing [[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8193909/#:~:text=The%20fission%20yeast%20Schizosaccharomyces%20pombe,budding%20yeast%20Saccharomyces%20cerevisiae%2C%20S.)]. Furthermore, it is crucial for us to ascertain the duration of its cell cycle and to accurately detect the specific stage at which each yeast cell is positioned. In conclusion, this _Schizosaccharomyces pombe_ yeast is well known for its contribution as a model organism for the understanding of regulation and conservation of the eukariotic cell cycle.
