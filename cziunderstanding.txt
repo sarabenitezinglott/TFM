@@ -30,4 +30,20 @@ In Windows different softwares can be used for this apporach, such as: **Image J
         /c2
     }
 
+------------------------
+More information about CZI Dimension Characters:
+
+0 : 'Sample', # e.g. RGBA
+X : 'Width',
+Y : 'Height',
+C : 'Channel',
+Z : 'Slice', # depth
+T : 'Time',
+R : 'Rotation',
+S : 'Scene', # contiguous regions of interest in a mosaic image
+I : 'Illumination', # direction
+B : 'Block', # acquisition
+M : 'Mosaic', # index of tile for compositing a scene
+H : 'Phase', # e.g. Airy detector fibers
+V : 'View', # e.g. for SPIM
 

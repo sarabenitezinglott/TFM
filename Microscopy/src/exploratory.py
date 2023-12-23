@@ -11,7 +11,8 @@ def czimetadata(czi):
     dimensions = czi.get_dims_shape() 
     print(czi.dims)
     print(czi.size)
-    img, shp = czi.read_image(S=7, Z=0)
+    #img, shp = czi.read_image(S=7, Z=0)
+    img, shp = czi.read_image()
     return dimensions, img, shp
 
 
