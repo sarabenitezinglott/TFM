@@ -1,16 +1,3 @@
-# -*- coding: utf-8 -*-
-
-#################################################################
-# File        : imgfileutils.py
-# Version     : 0.3
-# Author      : czsrh
-# Date        : 20.04.2020
-# Institution : Carl Zeiss Microscopy GmbH
-#
-# Copyright (c) 2020 Carl Zeiss AG, Germany. All Rights Reserved.
-#################################################################
-
-
 import warnings
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
@@ -67,13 +54,9 @@ def get_imgtype(imagefile):
     return imgtype
 
 
-def create_metadata_dict():
-    """A Python dictionary will be created to hold the relevant metadata.
+## A dictionary will be created to hold the relevant metadata.
 
-    :return: dictionary with keys for the relevant metadata
-    :rtype: dict
-    """
-
+def create_metadata_dict():   
     metadata = {'Directory': None,
                 'Filename': None,
                 'Extension': None,
@@ -87,8 +70,6 @@ def create_metadata_dict():
                 'SizeC': None,
                 'SizeT': None,
                 'Sizes BF': None,
-                # 'DimOrder BF': None,
-                # 'DimOrder BF Array': None,
                 'Axes': None,
                 'Shape': None,
                 'isRGB': None,
@@ -128,25 +109,12 @@ def get_metadata(imagefile, series=0):
     :return: additional_mdczi - dict with additional the metainformation for CZI only
     :rtype: dict
     """
-
     # get the image type
     imgtype = get_imgtype(imagefile)
     print('Image Type: ', imgtype)
 
     md = None
     additional_mdczi = None
-
-    if imgtype == 'ometiff':
-
-        with tifffile.TiffFile(imagefile) as tif:
-            # get OME-XML metadata as string
-            omexml = tif[0].image_description.decode('utf-8')
-
-        # get the OME-XML using the apeer-ometiff-library
-        omemd = omexmlClass.OMEXML(omexml)
-
-        # parse the OME-XML and return the metadata dictionary and additional information
-        md = get_metadata_ometiff(imagefile, omemd, series=series)
 
     if imgtype == 'czi':
 
@@ -155,96 +123,6 @@ def get_metadata(imagefile, series=0):
         additional_mdczi = get_additional_metadata_czi(imagefile)
 
     return md, additional_mdczi
-
-
-def get_metadata_ometiff(filename, omemd, series=0):
-    """Returns a dictionary with OME-TIFF metadata.
-
-    :param filename: filename of the OME-TIFF image
-    :type filename: str
-    :param omemd: OME-XML information
-    :type omemd: OME-XML
-    :param series: Image Series, defaults to 0
-    :type series: int, optional
-    :return: dictionary with the relevant OME-TIFF metainformation
-    :rtype: dict
-    """
-
-    # create dictionary for metadata and get OME-XML data
-    metadata = create_metadata_dict()
-
-    # get directory and filename etc.
-    metadata['Directory'] = os.path.dirname(filename)
-    metadata['Filename'] = os.path.basename(filename)
-    metadata['Extension'] = 'ome.tiff'
-    metadata['ImageType'] = 'ometiff'
-    metadata['AcqDate'] = omemd.image(series).AcquisitionDate
-    metadata['Name'] = omemd.image(series).Name
-
-    # get image dimensions
-    metadata['SizeT'] = omemd.image(series).Pixels.SizeT
-    metadata['SizeZ'] = omemd.image(series).Pixels.SizeZ
-    metadata['SizeC'] = omemd.image(series).Pixels.SizeC
-    metadata['SizeX'] = omemd.image(series).Pixels.SizeX
-    metadata['SizeY'] = omemd.image(series).Pixels.SizeY
-
-    # get number of series
-    metadata['TotalSeries'] = omemd.get_image_count()
-    metadata['Sizes BF'] = [metadata['TotalSeries'],
-                            metadata['SizeT'],
-                            metadata['SizeZ'],
-                            metadata['SizeC'],
-                            metadata['SizeY'],
-                            metadata['SizeX']]
-
-    # get dimension order
-    metadata['DimOrder BF'] = omemd.image(series).Pixels.DimensionOrder
-
-    # reverse the order to reflect later the array shape
-    metadata['DimOrder BF Array'] = metadata['DimOrder BF'][::-1]
-
-    # get the scaling
-    metadata['XScale'] = omemd.image(series).Pixels.PhysicalSizeX
-    metadata['XScaleUnit'] = omemd.image(series).Pixels.PhysicalSizeXUnit
-    metadata['YScale'] = omemd.image(series).Pixels.PhysicalSizeY
-    metadata['YScaleUnit'] = omemd.image(series).Pixels.PhysicalSizeYUnit
-    metadata['ZScale'] = omemd.image(series).Pixels.PhysicalSizeZ
-    metadata['ZScaleUnit'] = omemd.image(series).Pixels.PhysicalSizeZUnit
-
-    # get all image IDs
-    for i in range(omemd.get_image_count()):
-        metadata['ImageIDs'].append(i)
-
-    # get information about the instrument and objective
-    try:
-        metadata['InstrumentID'] = omemd.instrument(series).get_ID()
-    except:
-        metadata['InstrumentID'] = None
-
-    try:
-        metadata['DetectorModel'] = omemd.instrument(series).Detector.get_Model()
-        metadata['DetectorID'] = omemd.instrument(series).Detector.get_ID()
-        metadata['DetectorModel'] = omemd.instrument(series).Detector.get_Type()
-    except:
-        metadata['DetectorModel'] = None
-        metadata['DetectorID'] = None
-        metadata['DetectorModel'] = None
-
-    try:
-        metadata['ObjNA'] = omemd.instrument(series).Objective.get_LensNA()
-        metadata['ObjID'] = omemd.instrument(series).Objective.get_ID()
-        metadata['ObjMag'] = omemd.instrument(series).Objective.get_NominalMagnification()
-    except:
-        metadata['ObjNA'] = None
-        metadata['ObjID'] = None
-        metadata['ObjMag'] = None
-
-    # get channel names
-    for c in range(metadata['SizeC']):
-        metadata['Channels'].append(omemd.image(series).Pixels.Channel(c).Name)
-
-    return metadata
-
 
 def get_metadata_czi(filename, dim2none=False):
     """
@@ -377,7 +255,7 @@ def get_metadata_czi(filename, dim2none=False):
     except Exception as e:
         #print('Exception:', e)
         if dim2none:
-            metadatada['SizeM'] = None
+            metadata['SizeM'] = None
         if not dim2none:
             metadata['SizeM'] = 1
 
@@ -386,7 +264,7 @@ def get_metadata_czi(filename, dim2none=False):
     except Exception as e:
         #print('Exception:', e)
         if dim2none:
-            metadatada['SizeB'] = None
+            metadata['SizeB'] = None
         if not dim2none:
             metadata['SizeB'] = 1
 
@@ -395,7 +273,7 @@ def get_metadata_czi(filename, dim2none=False):
     except Exception as e:
         print('Exception:', e)
         if dim2none:
-            metadatada['SizeS'] = None
+            metadata['SizeS'] = None
         if not dim2none:
             metadata['SizeS'] = 1
 
@@ -670,124 +548,6 @@ def md2dataframe(metadata, paramcol='Parameter', keycol='Value'):
         mdframe = pd.concat([mdframe, df], ignore_index=True)
 
     return mdframe
-
-
-def create_ipyviewer_ome_tiff(array, metadata):
-    """
-    Creates a simple interactive viewer inside a Jupyter Notebook.
-    Works with OME-TIFF files and the respective metadata
-
-    :param array: multidimensional array containing the pixel data
-    :type array: NumPy.Array
-    :param metadata: dictionary with the metainformation
-    :return: out - interactive widgetsfor jupyter notebook
-    :rtype: IPyWidgets Output
-    :return: ui - ui for interactive widgets
-    :rtype: IPyWidgets UI
-    """
-
-    # time slider
-    t = widgets.IntSlider(description='Time:',
-                          min=1,
-                          max=metadata['SizeT'],
-                          step=1,
-                          value=1,
-                          continuous_update=False)
-
-    # zplane lsider
-    z = widgets.IntSlider(description='Z-Plane:',
-                          min=1,
-                          max=metadata['SizeZ'],
-                          step=1,
-                          value=1,
-                          continuous_update=False)
-
-    # channel slider
-    c = widgets.IntSlider(description='Channel:',
-                          min=1,
-                          max=metadata['SizeC'],
-                          step=1,
-                          value=1)
-
-    # slider for contrast
-    r = widgets.IntRangeSlider(description='Display Range:',
-                               min=array.min(),
-                               max=array.max(),
-                               step=1,
-                               value=[array.min(), array.max()],
-                               continuous_update=False)
-
-    # disable slider that are not needed
-    if metadata['SizeT'] == 1:
-        t.disabled = True
-    if metadata['SizeZ'] == 1:
-        z.disabled = True
-    if metadata['SizeC'] == 1:
-        c.disabled = True
-
-    sliders = metadata['DimOrder BF Array'][:-2] + 'R'
-
-    # TODO: this section is not complete, because it does not contain all possible cases
-    # TODO: it is still under constrcution and can be done probably in a much smarter way
-
-    if sliders == 'CTZR':
-        ui = widgets.VBox([c, t, z, r])
-
-        def get_TZC_czi(c_ind, t_ind, z_ind, r):
-            display_image(array, metadata, sliders, c=c_ind, t=t_ind, z=z_ind, vmin=r[0], vmax=r[1])
-
-        out = widgets.interactive_output(get_TZC_czi, {'c_ind': c, 't_ind': t, 'z_ind': z, 'r': r})
-
-    if sliders == 'TZCR':
-        ui = widgets.VBox([t, z, c, r])
-
-        def get_TZC_czi(t_ind, z_ind, c_ind, r):
-            display_image(array, metadata, sliders, t=t_ind, z=z_ind, c=c_ind, vmin=r[0], vmax=r[1])
-
-        out = widgets.interactive_output(get_TZC_czi, {'t_ind': t, 'z_ind': z, 'c_ind': c, 'r': r})
-
-    if sliders == 'TCZR':
-        ui = widgets.VBox([t, c, z, r])
-
-        def get_TZC_czi(t_ind, c_ind, z_ind, r):
-            display_image(array, metadata, sliders, t=t_ind, c=t_ind, z=z_ind, vmin=r[0], vmax=r[1])
-
-        out = widgets.interactive_output(get_TZC_czi, {'t_ind': t, 'c_ind': c, 'z_ind': z, 'r': r})
-
-    if sliders == 'CZTR':
-        ui = widgets.VBox([c, z, t, r])
-
-        def get_TZC_czi(c_ind, z_ind, t_ind, r):
-            display_image(array, metadata, sliders, c=c_ind, z=z_ind, t=t_ind, vmin=r[0], vmax=r[1])
-
-        out = widgets.interactive_output(get_TZC_czi, {'c_ind': c, 'z_ind': z, 't_ind': t, 'r': r})
-
-    if sliders == 'ZTCR':
-        ui = widgets.VBox([z, t, c, r])
-
-        def get_TZC_czi(z_ind, t_ind, c_ind, r):
-            display_image(array, metadata, sliders, z=z_ind, t=t_ind, c=c_ind, vmin=r[0], vmax=r[1])
-
-        out = widgets.interactive_output(get_TZC_czi, {'z_ind': z, 't_ind': t, 'c_ind': c, 'r': r})
-
-    if sliders == 'ZCTR':
-        ui = widgets.VBox([z, c, t, r])
-
-        def get_TZC_czi(z_ind, c_ind, t_ind, r):
-            display_image(array, metadata, sliders, z=z_ind, c=c_ind, t=t_ind, vmin=r[0], vmax=r[1])
-
-        out = widgets.interactive_output(get_TZC_czi, {'z_ind': z, 'c_ind': c, 't_ind': t, 'r': r})
-
-    """
-    ui = widgets.VBox([t, z, c, r])
-
-    def get_TZC_ometiff(t, z, c, r):
-        display_image(array, metadata, 'TZCR', t=t, z=z, c=c, vmin=r[0], vmax=r[1])
-
-    out = widgets.interactive_output(get_TZC_ometiff, {'t': t, 'z': z, 'c': c, 'r': r})
-    """
-
-    return out, ui  # , t, z, c, r
 
 
 def create_ipyviewer_czi(cziarray, metadata):
@@ -1238,7 +998,6 @@ def get_array_czi(filename,
 
 
 def get_array_pylibczi(filename, return_addmd=False, **kwargs):
-
     metadata = get_metadata_czi(filename)
     additional_metadata_czi = get_additional_metadata_czi(filename)
 
@@ -1510,53 +1269,3 @@ def writexml_czi(filename, xmlsuffix='_CZI_MetaData.xml'):
     tree.write(xmlfile, encoding='utf-8', method='xml')
 
     return xmlfile
-
-
-def writexml_ometiff(filename, xmlsuffix='_OMETIFF_MetaData.xml'):
-    """Write XML imformation of OME-TIFF to disk
-
-    :param filename: OME-TIFF image filename
-    :type filename: str
-    :param xmlsuffix: suffix for the XML file that will be created, defaults to '_OMETIFF_MetaData.xml'
-    :type xmlsuffix: str, optional
-    :return: filename of the XML file
-    :rtype: str
-    """
-
-    if filename.lower().endswith('.ome.tiff'):
-        ext = '.ome.tiff'
-    if filename.lower().endswith('.ome.tif'):
-        ext = '.ome.tif'
-
-    with tifffile.TiffFile(filename) as tif:
-        # omexml_string = tif[0].image_description.decode('utf-8')
-        omexml_string = tif[0].image_description
-
-    # get tree from string
-    # tree = ET.ElementTree(ET.fromstring(omexml_string.encode('utf-8')))
-    tree = ET.ElementTree(ET.fromstring(omexml_string))
-
-    # change file name
-    xmlfile = filename.replace(ext, xmlsuffix)
-
-    tree.write(xmlfile, encoding='utf-8', method='xml', pretty_print=True)
-    print('Created OME-XML file for testdata: ', filename)
-
-    return xmlfile
-
-
-def getImageSeriesIDforWell(welllist, wellID):
-    """
-    Returns all ImageSeries (for OME-TIFF) indicies for a specific wellID
-
-    :param welllist: list containing all wellIDs as stringe, e.g. '[B4, B4, B4, B4, B5, B5, B5, B5]'
-    :type welllist: list
-    :param wellID: string specifying the well, eg.g. 'B4'
-    :type wellID: str
-    :return: imageseriesindices - list containing all ImageSeries indices, which correspond the the well
-    :rtype: list
-    """
-
-    imageseries_indices = [i for i, x in enumerate(welllist) if x == wellID]
-
-    return imageseries_indices
