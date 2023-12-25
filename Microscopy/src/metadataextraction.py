@@ -2,10 +2,8 @@ import warnings
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
 from czifile import CziFile
-from apeer_ometiff_library import io, processing, omexmlClass
 import os
 import pydash
-import tifffile
 import ipywidgets as widgets
 from matplotlib import pyplot as plt, cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -13,12 +11,24 @@ import xmltodict
 import numpy as np
 from collections import Counter
 from lxml import etree as ET
-import time
-import re
-from aicsimageio import AICSImage, imread, imread_dask
+from aicsimageio import AICSImage
 import dask.array as da
 import napari
 import pandas as pd
+
+# Exploration 
+def openczi(path):
+    czi = CziFile(path)
+    return czi
+
+def dimensions(czi):
+    dims = czi.get_dims_shape() 
+    return dims
+
+def image_info(czi):
+    img, shp = czi.read_image()
+    return img, shp
+
 
 # Returns the type of the image based on the file extension - no magic
 

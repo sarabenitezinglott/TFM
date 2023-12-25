@@ -1,4 +1,4 @@
-Understanding the .czi file. 
+Understanding .czi extension 
 
 For this aim, **metadata information** from each czi has to be extracted.
 In Windows different softwares can be used for this apporach, such as: **Image J**, ZEN or NetScope.  
