@@ -1,6 +1,7 @@
 import numpy as np
 import napari
 from aicsimageio import AICSImage
+from IPython.display import display, Image
 
 # Visualize the images: 
 def visualize_images(filepath):
@@ -17,4 +18,4 @@ def visualize_images(filepath):
 def napari_view_channels():
     image_paths = ["images/red.png", "images/blue.png", "images/green.png"]
     for i in image_paths:
-        print(i)
+        display(Image(i))
