@@ -26,7 +26,7 @@ In Windows different softwares can be used for this apporach, such as: **Image J
             Index2/Index
             ChannelProcessingModeProcessChannel/ChannelProcessingMode
             Represents: 
-                Sid2: spindle pole body and early sepation
+                Sid2: spindle pole body and early separation
         /c2
     }
 
