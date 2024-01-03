@@ -29,9 +29,9 @@ def create_df(folder):
         df = pd.DataFrame(list_tiff, columns=["File_path"])
         # Cleaning df
         df["File_path1"] = df["File_path"]
-        print(df)
+        df["File_path1"] = df["File_path1"].str.replace("\\","/")
         df["File_path1"] = df["File_path1"].str.extract(r'D:/TFM/Microscopy/video/copies/(.*)')
-        df[["Channel", "Copie"]] = df["File_path1"].str.split("\\", expand=True)
+        df[["Channel", "Copie"]] = df["File_path1"].str.split("/", expand=True)
         df[["Sample", "Duplicates", "Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})copia(\d{4})')
         df.drop(columns=["File_path1", "Copie"], inplace=True)
 
