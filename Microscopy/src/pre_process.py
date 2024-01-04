@@ -108,17 +108,17 @@ def image_generator():
     test_datagen = ImageDataGenerator(rescale=1./255)
 
     train_generator = train_datagen.flow_from_directory(
-        "D:/bootcamp/original/try_train/",  # this is the target directory
+        "D:/TFM/Microscopy/video/copies/train_folder",  # this is the target directory
         target_size=(500, 500),  # all images will be resized to 150x150
-        batch_size=32,
-        class_mode='binary',
+        batch_size=1,
+        class_mode='categorical',
         shuffle=False)  
     
     validation_generator = test_datagen.flow_from_directory(
-        "D:/bootcamp/original/try_val/",
+        "D:/TFM/Microscopy/video/copies/val_folder",
         target_size=(500, 500),
-        batch_size=32,
-        class_mode='binary',
+        batch_size=1,
+        class_mode='categorical',
         shuffle=False)
     
     return train_generator, validation_generator
