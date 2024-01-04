@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 
 def create_df(folder):
     subfolders = [f.path for f in os.scandir(folder) if f.is_dir()]
+    print(subfolders)
     dfs = []
 
     for sub in subfolders:
@@ -25,26 +26,28 @@ def create_df(folder):
 
         for file in os.listdir(sub):
             list_tiff.append(os.path.join(sub, file))
-
+        
         df = pd.DataFrame(list_tiff, columns=["File_path"])
         # Cleaning df
         df["File_path1"] = df["File_path"]
+        df["File_path1"] = df["File_path1"].str.extract(r'D:/TFM/Microscopy/video/copies/channels/(.*)')
         df["File_path1"] = df["File_path1"].str.replace("\\","/")
-        df["File_path1"] = df["File_path1"].str.extract(r'D:/TFM/Microscopy/video/copies/(.*)')
-        df[["Channel", "Copie"]] = df["File_path1"].str.split("\\", expand=True)
-        df[["Sample", "Duplicates", "Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})copia(\d{4})')
+        df["Image_id"] = df["File_path1"].str.findall(r'(\d{4}-\d{1}[a-z]\d{4})').str[0]
+        df[["Channel", "Copie"]] = df["File_path1"].str.split("/", expand=True)
+        df[["Sample", "Duplicates","Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})[a-z](\d{4})')
         df.drop(columns=["File_path1", "Copie"], inplace=True)
 
         lista = ["blue", "green", "red"]
         for color in lista:
-            df.loc[df['Channel'] == color, 'Label'] = lista.index(color)
-
+            df.loc[df["Channel"] == color, "Label"] = lista.index(color)
+        df["Label"] = df["Label"].astype(int)
         dfs.append(df)
 
     blue, green, red = dfs[0], dfs[1], dfs[2]
     # Concatenate df vertically. pd.merge() is not an option as it combines df horizontally.
     semi = pd.concat([blue, green], axis=0)
     all_df = pd.concat([red, semi], axis=0)
+    all_df = all_df.reset_index(drop=True)
 
     return blue, green, red, all_df
 
@@ -71,21 +74,21 @@ def createfolders(data_path,folder_names):
 # Move images using shutil library
 def move_images(df, folder_path):
     for _, i in df.iterrows():
-        src = i['file_path']
-        shutil.move(src, folder_path)
+        src = i['File_path']
+        shutil.copy(src, folder_path)
 
 # Create subfolders for each label, inside of each folder
 def images_class(df, folder_path_blue, folder_path_green, folder_path_red):
     for _, i in df.iterrows():
-        if i["Channel"] == "blue":
+        if i["Channel"] == "red":
             src = i['new_file_path']
-            shutil.move(src, folder_path_blue)
+            shutil.copy(src, folder_path_red)
         if i["Channel"] == "green":
             src = i['new_file_path']
-            shutil.move(src, folder_path_green)
+            shutil.copy(src, folder_path_green)
         else:
             src = i['new_file_path']
-            shutil.move(src, folder_path_red)
+            shutil.copy(src, folder_path_blue)
 
 
 # Tried use mean subtraction, normalization, and standards to scale pixels, 
