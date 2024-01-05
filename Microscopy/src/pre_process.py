@@ -109,21 +109,21 @@ def image_generator():
 
     train_generator = train_datagen.flow_from_directory(
         "D:/TFM/Microscopy/video/copies/train_folder",  # this is the target directory
-        target_size=(500, 500),  # all images will be resized to 150x150
+        target_size=(1000, 1000),  # all images will be resized to 150x150
         batch_size=1,
         class_mode='categorical',
         shuffle=False)  
     
     validation_generator = test_datagen.flow_from_directory(
         "D:/TFM/Microscopy/video/copies/val_folder",
-        target_size=(500, 500),
+        target_size=(1000, 1000),
         batch_size=1,
         class_mode='categorical',
         shuffle=False)
     
     return train_generator, validation_generator
 
-def plot_augmented_images(train_generator, num_images=5):
+def plot_augmented_images(train_generator, num_images=2):
     original_images = next(train_generator)
     original_image = original_images[0]
 
