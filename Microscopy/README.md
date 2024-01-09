@@ -6,10 +6,20 @@
 The duration of the cell cycle varies across different species. In the case of _Schizosaccharomyces pombe_ fission yeast, its cell cycle spans 8 hours, making it a preferred choice in numerous research laboratories. This preference stems not only from its distinctive cell cycle length but also from other resemblances it shares with human cells, such us gene structure, chromatin dynamics, prevalence of introns and the gene expression through pre-mRNA splicing, RNAi pathways and epigenetic gene silencing [[1](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8193909/#:~:text=The%20fission%20yeast%20Schizosaccharomyces%20pombe,budding%20yeast%20Saccharomyces%20cerevisiae%2C%20S.)]. Furthermore, it is crucial for us to ascertain the duration of its cell cycle and to accurately detect the specific stage at which each yeast cell is positioned. In conclusion, this _Schizosaccharomyces pombe_ yeast is well known for its contribution as a model organism for the understanding of regulation and conservation of the eukariotic cell cycle.
 
 For this apprach of identifying yeast cell cycle stages in a video, different techniques could be used: 
-- GUI-Based Python framework called Cell-ACDC or Cell-Analysis of the Cell Division Cycle (Cell-ACDC is an application which combines the best available neural network models)
 - R-CNN
+- GUI-Based Python framework called Cell-ACDC or Cell-Analysis of the Cell Division Cycle (Cell-ACDC is an application which combines the best available neural network models)
+
+## Region based CNN method
+
+Is used for object detection in computer vision tasks. It starts by dividing the input image into multiple regions or subregions. These regions are referred as "region proposals", which is the responsible for generating a set of potencial regions in the images that are likely to contain objects. Furthermore, this regions are based on external methods such us Selective Search or EdgeBoxes to generate these proposal regions. 
+Regarding object classification, it is typically uses Supported Vector Machines (SVMs). For each class, a unique SVM is trained to determine whether or nt the region propoal contains an instance of that class. Addtionaly, it performs bounding box regression for each class, which helps to improve the accuracy of object localization by adjusting the initially proposed bounding box to better fit the object's actual boundaries. 
+After the classification, it applies non-maaximum suppresion to quit or eliminate duplicate or highly overlapping bounding boxes, esuring that only the most confident and non-overlapping bounding boxes are retained as final object detection.  
+
+[github steps](https://github.com/matterport/Mask_RCNN)
 
 ## Cell ACDC method
+
+Cell-ACDC application automatically computes several single-cell numerical features such as cell area and cell volume, plus the mean, max, median, sum and quantiles of any additional fluorescent channel's signal. It even performs background correction, to compute the protein amount and concentration.
 
 <p align="center">
 
@@ -33,12 +43,6 @@ For this apprach of identifying yeast cell cycle stages in a video, different te
 |Not licence requiered|Y| Y |Y|Y |Y | - |Y| Y|Y |Y|Y|
 
 </p>
-
-Cell-ACDC automatically computes several single-cell numerical features such as cell area and cell volume, plus the mean, max, median, sum and quantiles of any additional fluorescent channel's signal. It even performs background correction, to compute the protein amount and concentration.
-
-## R-CNN method
-
-[github steps](https://github.com/matterport/Mask_RCNN)
 
 ## Aims
 

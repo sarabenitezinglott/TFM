@@ -3,14 +3,14 @@ warnings.filterwarnings("ignore")
 
 import numpy as np
 import os
-import re
+import cv2
 import shutil
 import numpy as np
 import pandas as pd
-from PIL import Image
-from numpy import asarray
-import matplotlib.pyplot as plt
 from keras.preprocessing import image
+from tensorflow import data as tf_data
+from tensorflow import image as tf_image
+from tensorflow import io as tf_io
 from keras.preprocessing.image import ImageDataGenerator 
 from sklearn.model_selection import train_test_split
 
@@ -91,52 +91,76 @@ def images_class(df, folder_path_blue, folder_path_green, folder_path_red):
             src = i['new_file_path']
             shutil.copy(src, folder_path_blue)
 
+# Once we have the creation of the training and validation folders, and the creation of the rgb subfolders, we can start with the segmentation part
+# For the segmentation part we need first to select the proposal regions to be the ones that we want, so we need to select them manually (manual annotation) with OpenCV
 
-# Tried use mean subtraction, normalization, and standards to scale pixels, 
-# however each of these methods affected the colors of the images. Found an 
-# alternate approach in the "ImageDataGenerator" function. 
+def threshold(img, thresh=127, mode='inverse'):
+    im = img.copy()
+    if mode == 'direct':
+        thresh_mode = cv2.THRESH_BINARY
+    else:
+        thresh_mode = cv2.THRESH_BINARY_INV
+     
+    ret, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
+    return thresh
 
-# An image generator for each CNN. Tried to join this 
-# function using conditionals but it was giving errors constantly. 
+def display(img, thresh):
+    display(img, thresh, 
+        name_l='Original Image', 
+        name_r='Thresholded Image',
+        figsize=(20,14))
 
-def image_generator():
-    train_datagen = ImageDataGenerator(
-        rescale=1./255,
-        shear_range=0.2,
-        zoom_range=0.2,
-        horizontal_flip=True)
-    
-    test_datagen = ImageDataGenerator(rescale=1./255)
+def get_bboxes(img):
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # Sort according to the area of contours in descending order.
+    sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
+    # Remove max area, outermost contour.
+    sorted_cnt.remove(sorted_cnt[0])
+    bboxes = []
+    for cnt in sorted_cnt:
+        x,y,w,h = cv2.boundingRect(cnt)
+        cnt_area = w * h
+        bboxes.append((x, y, x+w, y+h))
+    return bboxes
 
-    train_generator = train_datagen.flow_from_directory(
-        "D:/TFM/Microscopy/video/copies/train_folder",  # this is the target directory
-        target_size=(2000, 2000),  # all images will be resized to 150x150
-        batch_size=1,
-        class_mode='categorical',
-        shuffle=False)  
-    
-    validation_generator = test_datagen.flow_from_directory(
-        "D:/TFM/Microscopy/video/copies/val_folder",
-        target_size=(2000, 2000),
-        batch_size=1,
-        class_mode='categorical',
-        shuffle=False)
-    
-    return train_generator, validation_generator
+def draw_annotations(img, bboxes, thickness=2, color=(0,255,0)):
+    annotations = img.copy()
+    for box in bboxes:
+        tlc = (box[0], box[1])
+        brc = (box[2], box[3])
+        cv2.rectangle(annotations, tlc, brc, color, thickness, cv2.LINE_AA)
+    return annotations
 
-def plot_augmented_images(train_generator, num_images=5):
-    original_images = next(train_generator)
-    original_image = original_images[0]
+def morph_op(img, mode='open', ksize=5, iterations=1):
+    im = img.copy()
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ksize, ksize))
+     
+    if mode == 'open':
+        morphed = cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
+    elif mode == 'close':
+        morphed = cv2.morphologyEx(im, cv2.MORPH_CLOSE, kernel)
+    elif mode == 'erode':
+        morphed = cv2.erode(im, kernel)
+    else:
+        morphed = cv2.dilate(im, kernel)
+    return morphed
 
-    original_image = np.expand_dims(original_image, axis=0)
-    augmented_iterator = train_generator
-    augmented_images = [next(augmented_iterator)[0][0].astype(np.uint8) for _ in range(num_images)]
+def get_filtered_bboxes(img, min_area_ratio=0.001):
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # Sort the contours according to area, larger to smaller.
+    sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
+    # Remove max area, outermost contour.
+    sorted_cnt.remove(sorted_cnt[0])
+    # Container to store filtered bboxes.
+    bboxes = []
+    # Image area.
+    im_area = img.shape[0] * img.shape[1]
+    for cnt in sorted_cnt:
+        x,y,w,h = cv2.boundingRect(cnt)
+        cnt_area = w * h
+        # Remove very small detections.
+        if cnt_area > min_area_ratio * im_area:
+            bboxes.append((x, y, x+w, y+h))
+    return bboxes
 
-    plt.figure(figsize=(15, 5))
 
-    for i, augmented_image in enumerate(augmented_images):
-        plt.subplot(1, num_images + 1, i + 2)
-        plt.imshow(augmented_image)
-        plt.title(f'Augmented {i + 1}')
-
-    plt.show()
