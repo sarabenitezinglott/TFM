@@ -7,6 +7,7 @@ import cv2
 import shutil
 import numpy as np
 import pandas as pd
+from IPython.display import display
 from keras.preprocessing import image
 from tensorflow import data as tf_data
 from tensorflow import image as tf_image
@@ -104,7 +105,7 @@ def threshold(img, thresh=127, mode='inverse'):
     ret, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
     return thresh
 
-def display(img, thresh):
+def display_image(img, thresh):
     display(img, thresh, 
         name_l='Original Image', 
         name_r='Thresholded Image',
@@ -162,5 +163,3 @@ def get_filtered_bboxes(img, min_area_ratio=0.001):
         if cnt_area > min_area_ratio * im_area:
             bboxes.append((x, y, x+w, y+h))
     return bboxes
-
-
