@@ -1,1 +1,5 @@
 #import the necessary libraries for microscopy 
+opencv-python 
+scikit-image 
+numpy 
+czifile
