@@ -1,12 +1,15 @@
 import cv2
+import sys
+import numpy as np
 import czifile
+import skimage
 from tqdm import tqdm
 from scipy import ndimage as ndi
 from skimage import morphology, filters
 import matplotlib.pyplot as plt
 import concurrent.futures
 import keras
-import tensorflow
+import tensorflow 
 from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, concatenate
 from keras.models import Model
 
@@ -60,7 +63,8 @@ def mask(czi_path):
                     plt.axis('off')
                     plt.savefig(f'c:/Users/saraa/TFM/mask/citoplasm/cito_mask_{i}.png')
 
-                else:  # Blue channel --> meiosis mask
+                ### Not sure about this mask, shows everything, not just mitosis
+                else:  # Blue channel --> mitosis mask
                     plt.imshow(erode, cmap='binary')
                     plt.axis('off')
                     plt.savefig(f'c:/Users/saraa/TFM/mask/meiosis/meiosis_mask_{i}.png')
@@ -69,11 +73,49 @@ def mask(czi_path):
 
     progress_bar.close()
 
-        
-    
+
+def mean_iou(y_true, y_pred):
+    prec = []
+    for t in np.arange(0.5, 1.0, 0.05):
+        y_pred_ = tensorflow.to_int32(y_pred > t)
+        score, up_opt = tensorflow.metrics.mean_iou(y_true, y_pred_, 2)
+        keras.get_session().run(tensorflow.local_variables_initializer())
+        with tensorflow.control_dependencies([up_opt]):
+            score = tensorflow.identity(score)
+        prec.append(score)
+    return keras.mean(keras.stack(prec), axis=0)
+
+IMG_WIDTH       = 256
+IMG_HEIGHT      = 256
+IMG_CHANNELS    = 3
+
+print('Python       :', sys.version.split('\n')[0])
+print('Numpy        :', np.__version__)
+print('Skimage      :', skimage.__version__)
+print('Tensorflow   :', tensorflow.__version__)
+
+
+#### Model hyperparameters 
+# Learning rate
+LR = 0.0001
+# Custom loss function
+def dice_coef(y_true, y_pred):
+    smooth = 1.
+    y_true_f = keras.flatten(y_true)
+    y_pred_f = keras.flatten(y_pred)
+    intersection = keras.sum(y_true_f * y_pred_f)
+    return (2. * intersection + smooth) / (keras.sum(y_true_f) + keras.sum(y_pred_f) + smooth)
+
+def bce_dice_loss(y_true, y_pred):
+    return 0.5 * tensorflow.keras.losses.binary_crossentropy(y_true, y_pred) - dice_coef(y_true, y_pred)
+
+epochs = 25
+batch = 8
+
 ##### U-NET ARCHITECTURE
     
 def build_model(input_layer, start_neurons):
+    ''' Encoder layer '''
     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
     pool1 = MaxPooling2D((2, 2))(conv1)
@@ -94,10 +136,11 @@ def build_model(input_layer, start_neurons):
     pool4 = MaxPooling2D((2, 2))(conv4)
     pool4 = Dropout(0.5)(pool4)
 
-    # Middle
+    ''' Bridge '''
     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
     
+    ''' Decoder layer'''
     deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
     uconv4 = concatenate([deconv4, conv4])
     uconv4 = Dropout(0.5)(uconv4)
@@ -126,5 +169,5 @@ def build_model(input_layer, start_neurons):
     
     return output_layer
 
-input_layer = Input((img_size_target, img_size_target, 1))
+input_layer = Input((100, 100, 1))
 output_layer = build_model(input_layer, 16)

@@ -12,7 +12,6 @@ from keras.preprocessing import image
 from tensorflow import data as tf_data
 from tensorflow import image as tf_image
 from tensorflow import io as tf_io
-from keras.preprocessing.image import ImageDataGenerator 
 from sklearn.model_selection import train_test_split
 
 # Create dataframe containing the .tiff images of each folder. A dataframe for each folder, so the train and test split can be done. 
@@ -53,6 +52,19 @@ def create_df(folder):
 
     return blue, green, red, all_df
 
+def mask_df(folder):
+    list_tiff = []
+    for file in os.listdir(folder):
+        list_tiff.append(os.path.join(folder, file))
+    
+    df1 = pd.DataFrame(list_tiff, columns=["File_path"])
+    # Cleaning df
+    df1["File_path1"] = df1["File_path"]
+    df1["Image_id"] = df1["File_path1"].str.extract(r'(nuclei_mask_\d*)')
+    df1["Timepoint"] = df1["Image_id"].str.extract(r'(\d+)')
+    df1.drop(columns=["File_path1"], inplace=True)
+
+    return df1
 
 # Split data into train and validation sets
 def train_valid_split(df):
