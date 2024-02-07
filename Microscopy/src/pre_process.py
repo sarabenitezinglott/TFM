@@ -8,13 +8,14 @@ import shutil
 import numpy as np
 import pandas as pd
 from IPython.display import display
-from keras.preprocessing import image
+from keras.preprocessing.image import ImageDataGenerator
 from tensorflow import data as tf_data
 from tensorflow import image as tf_image
 from tensorflow import io as tf_io
 from sklearn.model_selection import train_test_split
 
-# Create dataframe containing the .tiff images of each folder. A dataframe for each folder, so the train and test split can be done. 
+# 1. Create dataframes 
+# 1.1 Create dataframe containing the .tiff images of each folder. A dataframe for each folder, so split can be done. 
 # dfs[0] is blue, dfs[1] is green, dfs[2] is red
 
 def create_df(folder):
@@ -29,16 +30,19 @@ def create_df(folder):
             list_tiff.append(os.path.join(sub, file))
         
         df = pd.DataFrame(list_tiff, columns=["File_path"])
-        # Cleaning df
-        df["File_path1"] = df["File_path"]
-        df["File_path1"] = df["File_path1"].str.extract(r'D:/TFM/Microscopy/video/copies/channels/(.*)')
+            # 1. File path
+        df["File_path1"] = df["File_path"].str.extract(r'D:/TFM/Microscopy/video/copies/channels/(.*)')
         df["File_path1"] = df["File_path1"].str.replace("\\","/")
+            # 2. Image ID
         df["Image_id"] = df["File_path1"].str.findall(r'(\d{4}-\d{1}[a-z]\d{4})').str[0]
+            # 3. Channel and copie columns
         df[["Channel", "Copie"]] = df["File_path1"].str.split("/", expand=True)
+            # 4. Extraction of copie information for three different columns
         df[["Sample", "Duplicates","Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})[a-z](\d{4})')
+            # 5. Cleaning
         df.drop(columns=["File_path1", "Copie"], inplace=True)
-
-        lista = ["blue", "green", "red"]
+            # 6. Label 
+        lista = ["red","green", "blue"]
         for color in lista:
             df.loc[df["Channel"] == color, "Label"] = lista.index(color)
         df["Label"] = df["Label"].astype(int)
@@ -52,30 +56,39 @@ def create_df(folder):
 
     return blue, green, red, all_df
 
-def mask_df(folder):
+# 1.2 Create dataframes for mask
+def mask_df(folder, channel):
     list_tiff = []
     for file in os.listdir(folder):
         list_tiff.append(os.path.join(folder, file))
-    
+    # Create df
+        # 1. File path
     df1 = pd.DataFrame(list_tiff, columns=["File_path"])
-    # Cleaning df
-    df1["File_path1"] = df1["File_path"]
-    df1["Image_id"] = df1["File_path1"].str.extract(r'(nuclei_mask_\d*)')
+        # 2. Image ID 
+    df1["Image_id"] = df1["File_path"].str.extract(r'(nuclei_mask_\d*)')
+        # 3. Timepoint
     df1["Timepoint"] = df1["Image_id"].str.extract(r'(\d+)')
-    df1.drop(columns=["File_path1"], inplace=True)
-
+        # 4. Channel 
+    if df1["Image_id"].str.contains("nuclei").any():
+        df1["Channel"] = "red"
+    elif df1["Image_id"].str.contains("citoplasm").any():
+        df1["Channel"] = "green"
+    else:
+        df1["Channel"] = "blue"
+        # 5. Label
+    lista = ["red","green", "blue"]
+    for color in lista:
+        df1.loc[df1["Channel"] == color, "Label"] = lista.index(color)
+    df1["Label"] = df1["Label"].astype(int)
     return df1
 
-# Split data into train and validation sets
-def train_valid_split(df):
-    train = df.drop(columns= ["Label"])
-    valid = df["Label"]
-    train_x, valid_x, train_y, valid_y = train_test_split(train,valid, test_size=0.2, stratify=df["Channel"], random_state=50)
-    print("The proportion of train x data is:", train_x['Channel'].value_counts() / len(train_x.Channel))
-    print("The proportion of valid x data is:", valid_x['Channel'].value_counts() / len(valid_x.Channel))
+# 2. Split data into images and masks sets for U-Net
+def train_valid_split(df_images, df_mask):
+    df_images[df_images["Channel"== "red"]]
+    train_x, valid_x, train_y, valid_y = train_test_split(df_images,df_mask, test_size=0.2, stratify=df_images["Channel"], random_state=0)
     return train_x, valid_x, train_y, valid_y
 
-# Creation of new folders, necesary for ImageDataGenerator image detection
+# 3. Creation of new folders, necesary for ImageDataGenerator image detection
 def createfolders(data_path,folder_names):
     for folder in folder_names:
         folder_path = os.path.join(data_path, folder)
@@ -103,75 +116,115 @@ def images_class(df, folder_path_blue, folder_path_green, folder_path_red):
         else:
             src = i['new_file_path']
             shutil.copy(src, folder_path_blue)
+            
+# 5. ImageDataGenerator
+def get_generator(Xtrain, Xtest, Ytrain, Ytest): 
+    img_data_gen_args = dict(rotation_range=90,
+                        width_shift_range=0.3,
+                        height_shift_range=0.3,
+                        shear_range=0.5,
+                        zoom_range=0.3,
+                        horizontal_flip=True,
+                        vertical_flip=True,
+                        fill_mode='reflect')
 
-# Once we have the creation of the training and validation folders, and the creation of the rgb subfolders, we can start with the segmentation part
-# For the segmentation part we need first to select the proposal regions to be the ones that we want, so we need to select them manually (manual annotation) with OpenCV
+    mask_data_gen_args = dict(rotation_range=90,
+                        width_shift_range=0.3,
+                        height_shift_range=0.3,
+                        shear_range=0.5,
+                        zoom_range=0.3,
+                        horizontal_flip=True,
+                        vertical_flip=True,
+                        fill_mode='reflect',
+                        preprocessing_function = lambda x: np.where(x>0, 1, 0).astype(x.dtype)) #Binarize the output again. 
+    
+    image_data_generator = ImageDataGenerator(**img_data_gen_args)
+    batch = 8 
+    seed = 24
+    img_gen = image_data_generator.flow(Xtrain, seed = seed, batch = batch)
+    valid_img_gen = image_data_generator.flow(Xtest, seed = seed, batch = batch)
 
-def threshold(img, thresh=127, mode='inverse'):
-    im = img.copy()
-    if mode == 'direct':
-        thresh_mode = cv2.THRESH_BINARY
-    else:
-        thresh_mode = cv2.THRESH_BINARY_INV
+    mask_data_generator = ImageDataGenerator(**mask_data_gen_args)
+    
+    mask_gen = mask_data_generator.flow(Ytrain, seed=seed, batch = batch)
+    valid_mask_gen = mask_data_generator.flow(Ytest, seed=seed, batch = batch)  #Default batch size 32, if not specified here
+
+    return img_gen, valid_img_gen, mask_gen, valid_mask_gen
+
+def my_image_mask_generator(image_generator, mask_generator):
+    train_generator = zip(image_generator, mask_generator)
+    for (img, mask) in train_generator:
+        yield (img, mask)
+
+ 
+# # Once we have the creation of the training and validation folders, and the creation of the rgb subfolders, we can start with the segmentation part
+# # For the segmentation part we need first to select the proposal regions to be the ones that we want, so we need to select them manually (manual annotation) with OpenCV
+
+# def threshold(img, thresh=127, mode='inverse'):
+#     im = img.copy()
+#     if mode == 'direct':
+#         thresh_mode = cv2.THRESH_BINARY
+#     else:
+#         thresh_mode = cv2.THRESH_BINARY_INV
      
-    ret, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
-    return thresh
+#     ret, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
+#     return thresh
 
-def display_image(img, thresh):
-    display(img, thresh, 
-        name_l='Original Image', 
-        name_r='Thresholded Image',
-        figsize=(20,14))
+# def display_image(img, thresh):
+#     display(img, thresh, 
+#         name_l='Original Image', 
+#         name_r='Thresholded Image',
+#         figsize=(20,14))
 
-def get_bboxes(img):
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    # Sort according to the area of contours in descending order.
-    sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
-    # Remove max area, outermost contour.
-    sorted_cnt.remove(sorted_cnt[0])
-    bboxes = []
-    for cnt in sorted_cnt:
-        x,y,w,h = cv2.boundingRect(cnt)
-        cnt_area = w * h
-        bboxes.append((x, y, x+w, y+h))
-    return bboxes
+# def get_bboxes(img):
+#     contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+#     # Sort according to the area of contours in descending order.
+#     sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
+#     # Remove max area, outermost contour.
+#     sorted_cnt.remove(sorted_cnt[0])
+#     bboxes = []
+#     for cnt in sorted_cnt:
+#         x,y,w,h = cv2.boundingRect(cnt)
+#         cnt_area = w * h
+#         bboxes.append((x, y, x+w, y+h))
+#     return bboxes
 
-def draw_annotations(img, bboxes, thickness=2, color=(0,255,0)):
-    annotations = img.copy()
-    for box in bboxes:
-        tlc = (box[0], box[1])
-        brc = (box[2], box[3])
-        cv2.rectangle(annotations, tlc, brc, color, thickness, cv2.LINE_AA)
-    return annotations
+# def draw_annotations(img, bboxes, thickness=2, color=(0,255,0)):
+#     annotations = img.copy()
+#     for box in bboxes:
+#         tlc = (box[0], box[1])
+#         brc = (box[2], box[3])
+#         cv2.rectangle(annotations, tlc, brc, color, thickness, cv2.LINE_AA)
+#     return annotations
 
-def morph_op(img, mode='open', ksize=5, iterations=1):
-    im = img.copy()
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ksize, ksize))
+# def morph_op(img, mode='open', ksize=5, iterations=1):
+#     im = img.copy()
+#     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ksize, ksize))
      
-    if mode == 'open':
-        morphed = cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
-    elif mode == 'close':
-        morphed = cv2.morphologyEx(im, cv2.MORPH_CLOSE, kernel)
-    elif mode == 'erode':
-        morphed = cv2.erode(im, kernel)
-    else:
-        morphed = cv2.dilate(im, kernel)
-    return morphed
+#     if mode == 'open':
+#         morphed = cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
+#     elif mode == 'close':
+#         morphed = cv2.morphologyEx(im, cv2.MORPH_CLOSE, kernel)
+#     elif mode == 'erode':
+#         morphed = cv2.erode(im, kernel)
+#     else:
+#         morphed = cv2.dilate(im, kernel)
+#     return morphed
 
-def get_filtered_bboxes(img, min_area_ratio=0.001):
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    # Sort the contours according to area, larger to smaller.
-    sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
-    # Remove max area, outermost contour.
-    sorted_cnt.remove(sorted_cnt[0])
-    # Container to store filtered bboxes.
-    bboxes = []
-    # Image area.
-    im_area = img.shape[0] * img.shape[1]
-    for cnt in sorted_cnt:
-        x,y,w,h = cv2.boundingRect(cnt)
-        cnt_area = w * h
-        # Remove very small detections.
-        if cnt_area > min_area_ratio * im_area:
-            bboxes.append((x, y, x+w, y+h))
-    return bboxes
+# def get_filtered_bboxes(img, min_area_ratio=0.001):
+#     contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+#     # Sort the contours according to area, larger to smaller.
+#     sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
+#     # Remove max area, outermost contour.
+#     sorted_cnt.remove(sorted_cnt[0])
+#     # Container to store filtered bboxes.
+#     bboxes = []
+#     # Image area.
+#     im_area = img.shape[0] * img.shape[1]
+#     for cnt in sorted_cnt:
+#         x,y,w,h = cv2.boundingRect(cnt)
+#         cnt_area = w * h
+#         # Remove very small detections.
+#         if cnt_area > min_area_ratio * im_area:
+#             bboxes.append((x, y, x+w, y+h))
+#     return bboxes

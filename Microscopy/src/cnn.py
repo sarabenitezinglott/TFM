@@ -152,62 +152,72 @@ def mask(path, filetype):
 # batch = 8
 
 ##### U-NET ARCHITECTURE
-####
+# Maxpooling: It reduces half the image size
+# Concatenation is important in U-Net, if not the segmentation would be imposible,
+    # also, it would be a normal convolutional neural network. The concatenation means to add 
+    # the filters obtained in the previous steps. So features are doubled (the previus one
+    # and the new one). 
+# To concatenate features, it must be the same lenght the convolutional layer to 
+    # the decoder layer.   
+# The pooling would be the output for the next layer. So: pool1, pool2, pool3 and pool 4
+    # would be the outputs, but the inputs for the next layer.  
+# The encoder blocks consists of a convolutional 2D layer (without batch normalization) 
+    # with a maxpooling layer
     
-# def build_model(input_layer, start_neurons):
-#     ''' Encoder layer '''
-#     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
-#     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
-#     pool1 = MaxPooling2D((2, 2))(conv1)
-#     pool1 = Dropout(0.25)(pool1)
+def build_model(input_layer, start_neurons):
+    ''' Encoder layers or contraction patch'''
+    conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
+    conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
+    pool1 = MaxPooling2D((2, 2))(conv1) 
+    pool1 = Dropout(0.25)(pool1)
 
-#     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(pool1)
-#     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(conv2)
-#     pool2 = MaxPooling2D((2, 2))(conv2)
-#     pool2 = Dropout(0.5)(pool2)
+    conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(pool1)
+    conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(conv2)
+    pool2 = MaxPooling2D((2, 2))(conv2)
+    pool2 = Dropout(0.5)(pool2)
 
-#     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(pool2)
-#     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(conv3)
-#     pool3 = MaxPooling2D((2, 2))(conv3)
-#     pool3 = Dropout(0.5)(pool3)
+    conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(pool2)
+    conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(conv3)
+    pool3 = MaxPooling2D((2, 2))(conv3)
+    pool3 = Dropout(0.5)(pool3)
 
-#     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(pool3)
-#     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
-#     pool4 = MaxPooling2D((2, 2))(conv4)
-#     pool4 = Dropout(0.5)(pool4)
+    conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(pool3)
+    conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
+    pool4 = MaxPooling2D((2, 2))(conv4)
+    pool4 = Dropout(0.5)(pool4)
 
-#     ''' Bridge '''
-#     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
-#     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
+    ''' Bridge '''
+    convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
+    convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
     
-#     ''' Decoder layer'''
-#     deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
-#     uconv4 = concatenate([deconv4, conv4])
-#     uconv4 = Dropout(0.5)(uconv4)
-#     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
-#     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
+    ''' Decoder layer or expansion patch'''
+    deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
+    uconv4 = concatenate([deconv4, conv4])
+    uconv4 = Dropout(0.5)(uconv4)
+    uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
+    uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
 
-#     deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
-#     uconv3 = concatenate([deconv3, conv3])
-#     uconv3 = Dropout(0.5)(uconv3)
-#     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
-#     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
+    deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
+    uconv3 = concatenate([deconv3, conv3])
+    uconv3 = Dropout(0.5)(uconv3)
+    uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
+    uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
 
-#     deconv2 = Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
-#     uconv2 = concatenate([deconv2, conv2])
-#     uconv2 = Dropout(0.5)(uconv2)
-#     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
-#     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
+    deconv2 = Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
+    uconv2 = concatenate([deconv2, conv2])
+    uconv2 = Dropout(0.5)(uconv2)
+    uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
+    uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
 
-#     deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
-#     uconv1 = concatenate([deconv1, conv1])
-#     uconv1 = Dropout(0.5)(uconv1)
-#     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
-#     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
+    deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
+    uconv1 = concatenate([deconv1, conv1])
+    uconv1 = Dropout(0.5)(uconv1)
+    uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
+    uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
     
-#     output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
+    output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
     
-#     return output_layer
+    return output_layer
 
-# input_layer = Input((100, 100, 1))
-# output_layer = build_model(input_layer, 16)
+input_layer = Input((900, 900, 1))
+output_layer = build_model(input_layer, 16)
