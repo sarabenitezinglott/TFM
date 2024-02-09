@@ -8,9 +8,11 @@ import shutil
 import numpy as np
 import pandas as pd
 from IPython.display import display
-from keras.preprocessing.image import ImageDataGenerator
+import tensorflow as tf
+import keras_preprocessing
 from tensorflow import data as tf_data
 from tensorflow import image as tf_image
+from keras.preprocessing.image import ImageDataGenerator
 from tensorflow import io as tf_io
 from sklearn.model_selection import train_test_split
 
@@ -57,7 +59,7 @@ def create_df(folder):
     return blue, green, red, all_df
 
 # 1.2 Create dataframes for mask
-def mask_df(folder, channel):
+def mask_df(folder):
     list_tiff = []
     for file in os.listdir(folder):
         list_tiff.append(os.path.join(folder, file))
@@ -85,8 +87,8 @@ def mask_df(folder, channel):
 # 2. Split data into images and masks sets for U-Net
 def train_valid_split(df_images, df_mask):
     df_images[df_images["Channel"== "red"]]
-    train_x, valid_x, train_y, valid_y = train_test_split(df_images,df_mask, test_size=0.2, stratify=df_images["Channel"], random_state=0)
-    return train_x, valid_x, train_y, valid_y
+    Xtrain, Xtest, Ytrain, Ytest = train_test_split(df_images,df_mask, test_size=0.2, stratify=df_images["Channel"], random_state=0)
+    return Xtrain, Xtest, Ytrain, Ytest
 
 # 3. Creation of new folders, necesary for ImageDataGenerator image detection
 def createfolders(data_path,folder_names):
@@ -117,7 +119,9 @@ def images_class(df, folder_path_blue, folder_path_green, folder_path_red):
             src = i['new_file_path']
             shutil.copy(src, folder_path_blue)
             
-# 5. ImageDataGenerator
+# 5. ImageDataGenerator --> Generates data for training and testing out of the split
+            # Xtrain and Xtest: Microscopy images (czi stack)
+            # Ytrain and Ytest: Mask images 
 def get_generator(Xtrain, Xtest, Ytrain, Ytest): 
     img_data_gen_args = dict(rotation_range=90,
                         width_shift_range=0.3,
@@ -137,21 +141,19 @@ def get_generator(Xtrain, Xtest, Ytrain, Ytest):
                         vertical_flip=True,
                         fill_mode='reflect',
                         preprocessing_function = lambda x: np.where(x>0, 1, 0).astype(x.dtype)) #Binarize the output again. 
-    
-    image_data_generator = ImageDataGenerator(**img_data_gen_args)
     batch = 8 
     seed = 24
-    img_gen = image_data_generator.flow(Xtrain, seed = seed, batch = batch)
+    image_data_generator = ImageDataGenerator(**img_data_gen_args)
+    img_generator = image_data_generator.flow(Xtrain, seed = seed, batch = batch)
     valid_img_gen = image_data_generator.flow(Xtest, seed = seed, batch = batch)
 
     mask_data_generator = ImageDataGenerator(**mask_data_gen_args)
-    
-    mask_gen = mask_data_generator.flow(Ytrain, seed=seed, batch = batch)
+    mask_generator = mask_data_generator.flow(Ytrain, seed=seed, batch = batch)
     valid_mask_gen = mask_data_generator.flow(Ytest, seed=seed, batch = batch)  #Default batch size 32, if not specified here
 
-    return img_gen, valid_img_gen, mask_gen, valid_mask_gen
+    return img_generator, valid_img_gen, mask_generator, valid_mask_gen
 
-def my_image_mask_generator(image_generator, mask_generator):
+def combine_generators(image_generator, mask_generator):
     train_generator = zip(image_generator, mask_generator)
     for (img, mask) in train_generator:
         yield (img, mask)
