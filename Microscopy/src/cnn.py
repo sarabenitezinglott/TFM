@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import concurrent.futures
 import keras
 import tensorflow 
-from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, concatenate
+from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, concatenate, Cropping2D
 from keras.models import Model
 
 #############################################
@@ -48,24 +48,26 @@ def mask(path, filetype):
                         image_plane = cv2.cvtColor(image_plane,cv2.COLOR_BGR2GRAY)
 
                     # 3. Gaussian filter  
-                    smooth = filters.gaussian(image_plane, sigma=1.5)
+                    smooth = filters.gaussian(image_plane, sigma=4)
 
                     # 4. Otsu threshold application
                     threshold_value = filters.threshold_otsu(smooth)
-                    thresh = smooth < threshold_value
+                    thresh = smooth > threshold_value
 
-                    # 5. Fill holes
-                    fill = ndi.binary_fill_holes(thresh)
+                    # 5. Removing small and filling holes
+                    fill = morphology.remove_small_holes(thresh, area_threshold= 70)
 
                     # 6. Perform dilation and erosion of the nucleus
                     dil = morphology.binary_dilation(fill)
-                    erode = morphology.binary_erosion(dil)
+                    erode = morphology.binary_erosion(dil)  # Boolean masks ('True' and 'False')
+                    
+                    # 7. Masks should be an 8-bit image: 'True' values become 0 and 'False' values 255
+                    # 0 values correspond to the background, while 255 values correspond to the nuclei
+                    erode_uint8 = np.uint8(erode) * 255
 
-                    # 7. Save the mask for each channel in different folders
+                    # 8. Save the mask for each channel in different folders
                     if j == 0: # Red channel --> nuclei mask 
-                        plt.imshow(erode, cmap='binary')
-                        plt.axis('off')
-                        plt.savefig(f'c:/Users/saraa/TFM/mask/nuclei/nuclei_mask_{i}.png')
+                        cv2.imwrite(f'c:/Users/saraa/TFM/mask/nuclei/nuclei_mask_{i}.png', erode_uint8)
                     
                     progress_bar.update(1)
 
@@ -88,25 +90,21 @@ def mask(path, filetype):
 
                     # 6. Perform dilation and erosion of the nucleus
                     dil = morphology.binary_dilation(fill)
-                    erode = morphology.binary_erosion(dil)
+                    erode = morphology.binary_erosion(dil) 
+                    
+                    # 7. Masks should be an 8-bit image: 'True' values become 0 and 'False' values 255
+                    erode_uint8 = np.uint8(erode) * 255
 
-                    # 7. Save the mask for each channel in different folders
+                    # 8. Save the mask for each channel in different folders
                     if j == 0: # Red channel --> nuclei mask 
-                        plt.imshow(erode, cmap='binary')
-                        plt.axis('off')
-                        plt.savefig(f'c:/Users/saraa/TFM/mask/nuclei/nuclei_mask_{i}.png')
+                        cv2.imwrite(f'c:/Users/saraa/TFM/mask/nuclei/nuclei_mask_{i}.png', erode_uint8)
 
                     # elif j == 1: # Green channel --> citoplasm mask
-                    #     fill = ndi.binary_fill_holes(erode)
-                    #     plt.imshow(fill, cmap='binary')
-                    #     plt.axis('off')
-                    #     plt.savefig(f'c:/Users/saraa/TFM/mask/citoplasm/cito_mask_{i}.png')
+                    #     cv2.imwrite(f'c:/Users/saraa/TFM/mask/citoplasm/cito_mask_{i}.png', erode_uint8)
 
                     # ### Not sure about this mask, shows everything, not just mitosis
                     # else:  # Blue channel --> mitosis mask
-                    #     plt.imshow(erode, cmap='binary')
-                    #     plt.axis('off')
-                    #     plt.savefig(f'c:/Users/saraa/TFM/mask/meiosis/meiosis_mask_{i}.png')
+                    #     cv2.imwrite(f'c:/Users/saraa/TFM/mask/meiosis/meiosis_mask_{i}.png', erode_uint8)
 
                     progress_bar.update(1)
 
@@ -164,27 +162,31 @@ def mask(path, filetype):
 # The encoder blocks consists of a convolutional 2D layer (without batch normalization) 
     # with a maxpooling layer
     
-def build_model(input_layer, start_neurons):
+def unet_model(input_layer, start_neurons):
     ''' Encoder layers or contraction patch'''
     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
     pool1 = MaxPooling2D((2, 2))(conv1) 
     pool1 = Dropout(0.25)(pool1)
+    print(conv1)
 
     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(pool1)
     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(conv2)
     pool2 = MaxPooling2D((2, 2))(conv2)
     pool2 = Dropout(0.5)(pool2)
+    print(conv2)
 
     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(pool2)
     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(conv3)
     pool3 = MaxPooling2D((2, 2))(conv3)
     pool3 = Dropout(0.5)(pool3)
+    print(conv3)
 
     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(pool3)
     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
     pool4 = MaxPooling2D((2, 2))(conv4)
     pool4 = Dropout(0.5)(pool4)
+    print(conv4)
 
     ''' Bridge '''
     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
@@ -192,25 +194,32 @@ def build_model(input_layer, start_neurons):
     
     ''' Decoder layer or expansion patch'''
     deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
+    print(deconv4)
     uconv4 = concatenate([deconv4, conv4])
     uconv4 = Dropout(0.5)(uconv4)
     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
 
     deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
-    uconv3 = concatenate([deconv3, conv3])
+    cropped_conv3 = Cropping2D(((0, 1), (0, 1)))(conv3) 
+    print(cropped_conv3)
+    uconv3 = concatenate([deconv3, cropped_conv3])
     uconv3 = Dropout(0.5)(uconv3)
     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
 
     deconv2 = Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
-    uconv2 = concatenate([deconv2, conv2])
+    cropped_conv2 = Cropping2D(((0, 1), (0, 1)))(conv2)
+    print(cropped_conv2)
+    uconv2 = concatenate([deconv2, cropped_conv2])
     uconv2 = Dropout(0.5)(uconv2)
     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
 
     deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
-    uconv1 = concatenate([deconv1, conv1])
+    cropped_conv1 = Cropping2D(((0, 1), (0, 1)))(conv1) 
+    print(cropped_conv1)
+    uconv1 = concatenate([deconv1, cropped_conv1])
     uconv1 = Dropout(0.5)(uconv1)
     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
@@ -219,5 +228,9 @@ def build_model(input_layer, start_neurons):
     
     return output_layer
 
-input_layer = Input((900, 900, 1))
-output_layer = build_model(input_layer, 16)
+
+
+## Before using it we need to use a compiler, to optimize it, for example Adam optimizer
+# model = build_unet(input_shape)
+# model.compile(optimizer=Adam(lr = 1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+# model.summary()

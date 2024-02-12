@@ -43,6 +43,7 @@ def create_df(folder):
         df[["Sample", "Duplicates","Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})[a-z](\d{4})')
             # 5. Cleaning
         df.drop(columns=["File_path1", "Copie"], inplace=True)
+        df.drop(df.tail(1).index,inplace=True)
             # 6. Label 
         lista = ["red","green", "blue"]
         for color in lista:
@@ -51,6 +52,8 @@ def create_df(folder):
         dfs.append(df)
 
     blue, green, red = dfs[0], dfs[1], dfs[2]
+    red = red.drop(red.index[2:3]).reset_index(drop=True)
+    red = red.drop(red.index[35:36]).reset_index(drop=True)
     # Concatenate df vertically. pd.merge() is not an option as it combines df horizontally.
     semi = pd.concat([blue, green], axis=0)
     all_df = pd.concat([red, semi], axis=0)
@@ -81,7 +84,7 @@ def mask_df(folder):
     lista = ["red","green", "blue"]
     for color in lista:
         df1.loc[df1["Channel"] == color, "Label"] = lista.index(color)
-    df1["Label"] = df1["Label"].astype(int)
+    df1["Label"] = df1["Label"].astype(int) 
     return df1
 
 # 2. Split data into images and masks sets for U-Net
