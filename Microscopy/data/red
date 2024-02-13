@@ -1,6 +1,6 @@
 ,File_path,Image_id,Channel,Sample,Duplicates,Timepoints,Label
 0,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0000.tif,3288-1r0000,red,3288,1,0000,0
-1,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0000_seg.npy,3288-1r0000,red,3288,1,0000,0
+1,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0001.tif,3288-1r0001,red,3288,1,0001,0
 2,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0002.tif,3288-1r0002,red,3288,1,0002,0
 3,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0003.tif,3288-1r0003,red,3288,1,0003,0
 4,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0004.tif,3288-1r0004,red,3288,1,0004,0
@@ -33,7 +33,7 @@
 31,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0031.tif,3288-1r0031,red,3288,1,0031,0
 32,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0032.tif,3288-1r0032,red,3288,1,0032,0
 33,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0033.tif,3288-1r0033,red,3288,1,0033,0
-34,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0033_seg.npy,3288-1r0033,red,3288,1,0033,0
+34,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0034.tif,3288-1r0034,red,3288,1,0034,0
 35,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0035.tif,3288-1r0035,red,3288,1,0035,0
 36,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0036.tif,3288-1r0036,red,3288,1,0036,0
 37,D:/TFM/Microscopy/video/copies/channels/red\3288-1r0037.tif,3288-1r0037,red,3288,1,0037,0

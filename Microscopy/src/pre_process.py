@@ -43,7 +43,6 @@ def create_df(folder):
         df[["Sample", "Duplicates","Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})[a-z](\d{4})')
             # 5. Cleaning
         df.drop(columns=["File_path1", "Copie"], inplace=True)
-        df.drop(df.tail(1).index,inplace=True)
             # 6. Label 
         lista = ["red","green", "blue"]
         for color in lista:
@@ -52,8 +51,7 @@ def create_df(folder):
         dfs.append(df)
 
     blue, green, red = dfs[0], dfs[1], dfs[2]
-    red = red.drop(red.index[2:3]).reset_index(drop=True)
-    red = red.drop(red.index[35:36]).reset_index(drop=True)
+    
     # Concatenate df vertically. pd.merge() is not an option as it combines df horizontally.
     semi = pd.concat([blue, green], axis=0)
     all_df = pd.concat([red, semi], axis=0)
@@ -71,26 +69,27 @@ def mask_df(folder):
     df1 = pd.DataFrame(list_tiff, columns=["File_path"])
         # 2. Image ID 
     df1["Image_id"] = df1["File_path"].str.extract(r'(nuclei_mask_\d*)')
-        # 3. Timepoint
-    df1["Timepoint"] = df1["Image_id"].str.extract(r'(\d+)')
-        # 4. Channel 
+        # 3. Channel 
     if df1["Image_id"].str.contains("nuclei").any():
         df1["Channel"] = "red"
     elif df1["Image_id"].str.contains("citoplasm").any():
         df1["Channel"] = "green"
     else:
         df1["Channel"] = "blue"
+        # 4. Timepoint
+    df1["Timepoint"] = df1["Image_id"].str.extract(r'(\d+)').astype(int)
         # 5. Label
     lista = ["red","green", "blue"]
     for color in lista:
         df1.loc[df1["Channel"] == color, "Label"] = lista.index(color)
     df1["Label"] = df1["Label"].astype(int) 
+    df1.sort_values(by="Timepoint", inplace = True)
+    df1 = df1.reset_index(drop = True)
     return df1
 
 # 2. Split data into images and masks sets for U-Net
 def train_valid_split(df_images, df_mask):
-    df_images[df_images["Channel"== "red"]]
-    Xtrain, Xtest, Ytrain, Ytest = train_test_split(df_images,df_mask, test_size=0.2, stratify=df_images["Channel"], random_state=0)
+    Xtrain, Xtest, Ytrain, Ytest = train_test_split(df_images,df_mask, test_size=0.2, random_state=0)
     return Xtrain, Xtest, Ytrain, Ytest
 
 # 3. Creation of new folders, necesary for ImageDataGenerator image detection
@@ -110,22 +109,22 @@ def move_images(df, folder_path):
         shutil.copy(src, folder_path)
 
 # Create subfolders for each label, inside of each folder
-def images_class(df, folder_path_blue, folder_path_green, folder_path_red):
+def images_class(df, folder_path):
     for _, i in df.iterrows():
         if i["Channel"] == "red":
             src = i['new_file_path']
-            shutil.copy(src, folder_path_red)
-        if i["Channel"] == "green":
+            shutil.copy(src, folder_path)
+        elif i["Channel"] == "green":
             src = i['new_file_path']
-            shutil.copy(src, folder_path_green)
+            shutil.copy(src, folder_path)
         else:
             src = i['new_file_path']
-            shutil.copy(src, folder_path_blue)
+            shutil.copy(src, folder_path)
             
 # 5. ImageDataGenerator --> Generates data for training and testing out of the split
             # Xtrain and Xtest: Microscopy images (czi stack)
             # Ytrain and Ytest: Mask images 
-def get_generator(Xtrain, Xtest, Ytrain, Ytest): 
+def get_generator(Xtrain_path, Xtest_path, Ytrain_path, Ytest_path): 
     img_data_gen_args = dict(rotation_range=90,
                         width_shift_range=0.3,
                         height_shift_range=0.3,
@@ -147,12 +146,12 @@ def get_generator(Xtrain, Xtest, Ytrain, Ytest):
     batch = 8 
     seed = 24
     image_data_generator = ImageDataGenerator(**img_data_gen_args)
-    img_generator = image_data_generator.flow(Xtrain, seed = seed, batch = batch)
-    valid_img_gen = image_data_generator.flow(Xtest, seed = seed, batch = batch)
+    img_generator = image_data_generator.flow_from_directory(Xtrain_path, seed = seed, batch_size = batch)
+    valid_img_gen = image_data_generator.flow_from_directory(Xtest_path, seed = seed, batch_size = batch)
 
     mask_data_generator = ImageDataGenerator(**mask_data_gen_args)
-    mask_generator = mask_data_generator.flow(Ytrain, seed=seed, batch = batch)
-    valid_mask_gen = mask_data_generator.flow(Ytest, seed=seed, batch = batch)  #Default batch size 32, if not specified here
+    mask_generator = mask_data_generator.flow_from_directory(Ytrain_path, seed=seed, batch_size = batch)
+    valid_mask_gen = mask_data_generator.flow_from_directory(Ytest_path, seed=seed, batch_size = batch)  #Default batch size 32, if not specified here
 
     return img_generator, valid_img_gen, mask_generator, valid_mask_gen
 
