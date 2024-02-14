@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import concurrent.futures
 import keras
 import tensorflow 
-from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, concatenate, Cropping2D
+from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, BatchNormalization
 from keras.models import Model
 
 #############################################
@@ -162,75 +162,125 @@ def mask(path, filetype):
 # The encoder blocks consists of a convolutional 2D layer (without batch normalization) 
     # with a maxpooling layer
     
-def unet_model(input_layer, start_neurons):
+# def unet_model(start_neurons):
+    
+#     input_layer = Input((572, 572, 1))
+
+    
+#     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
+#     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
+#     pool1 = MaxPooling2D((2, 2))(conv1) 
+#     pool1 = Dropout(0.25)(pool1)
+#     print(conv1)
+
+#     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(pool1)
+#     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(conv2)
+#     pool2 = MaxPooling2D((2, 2))(conv2)
+#     pool2 = Dropout(0.5)(pool2)
+#     print(conv2)
+
+#     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(pool2)
+#     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(conv3)
+#     pool3 = MaxPooling2D((2, 2))(conv3)
+#     pool3 = Dropout(0.5)(pool3)
+#     print(conv3)
+
+#     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(pool3)
+#     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
+#     pool4 = MaxPooling2D((2, 2))(conv4)
+#     pool4 = Dropout(0.5)(pool4)
+#     print(conv4)
+
+#     ''' Bridge '''
+#     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
+#     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
+    
+#     ''' Decoder layer or expansion patch'''
+#     deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
+#     print(deconv4)
+#     uconv4 = concatenate([deconv4, conv4])
+#     uconv4 = Dropout(0.5)(uconv4)
+#     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
+#     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
+
+#     deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
+#     print(deconv3)
+#     uconv3 = concatenate([deconv3, conv3])
+#     uconv3 = Dropout(0.5)(uconv3)
+#     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
+#     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
+
+#     deconv2 = Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
+#     print(deconv2)
+#     uconv2 = concatenate([deconv2, conv2])
+#     uconv2 = Dropout(0.5)(uconv2)
+#     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
+#     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
+
+#     deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
+#     print(deconv1)
+#     uconv1 = concatenate([deconv1, conv1])
+#     uconv1 = Dropout(0.5)(uconv1)
+#     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
+#     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
+    
+#     output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
+    
+#     return output_layer
+
+
+def conv_block(input, num_filters):
+    x = Conv2D(num_filters, 3, padding="same")(input)
+    x = BatchNormalization()(x)   #Not in the original network. 
+    x = Activation("relu")(x)
+
+    x = Conv2D(num_filters, 3, padding="same")(x)
+    x = BatchNormalization()(x)  #Not in the original network
+    x = Activation("relu")(x)
+
+    return x
+
+#Encoder block: Conv block followed by maxpooling
+
+
+def encoder_block(input, num_filters):
+    x = conv_block(input, num_filters)
+    p = MaxPooling2D((2, 2))(x)
+    return x, p   
+
+#Decoder block
+#skip features gets input from encoder for concatenation
+
+def decoder_block(input, skip_features, num_filters):
+    x = Conv2DTranspose(num_filters, (2, 2), strides=2, padding="same")(input)
+    x = Concatenate()([x, skip_features])
+    x = conv_block(x, num_filters)
+    return x
+
+#Build Unet using the blocks
+def build_unet(input_shape):
+    ''' Input layer'''
+    inputs = Input(input_shape)
+
     ''' Encoder layers or contraction patch'''
-    conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
-    conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
-    pool1 = MaxPooling2D((2, 2))(conv1) 
-    pool1 = Dropout(0.25)(pool1)
-    print(conv1)
-
-    conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(pool1)
-    conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(conv2)
-    pool2 = MaxPooling2D((2, 2))(conv2)
-    pool2 = Dropout(0.5)(pool2)
-    print(conv2)
-
-    conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(pool2)
-    conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(conv3)
-    pool3 = MaxPooling2D((2, 2))(conv3)
-    pool3 = Dropout(0.5)(pool3)
-    print(conv3)
-
-    conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(pool3)
-    conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
-    pool4 = MaxPooling2D((2, 2))(conv4)
-    pool4 = Dropout(0.5)(pool4)
-    print(conv4)
+    s1, p1 = encoder_block(inputs, 64)
+    s2, p2 = encoder_block(p1, 128)
+    s3, p3 = encoder_block(p2, 256)
+    s4, p4 = encoder_block(p3, 512)
 
     ''' Bridge '''
-    convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
-    convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
-    
+    b1 = conv_block(p4, 1024) 
+
     ''' Decoder layer or expansion patch'''
-    deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
-    print(deconv4)
-    uconv4 = concatenate([deconv4, conv4])
-    uconv4 = Dropout(0.5)(uconv4)
-    uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
-    uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
+    d1 = decoder_block(b1, s4, 512)
+    d2 = decoder_block(d1, s3, 256)
+    d3 = decoder_block(d2, s2, 128)
+    d4 = decoder_block(d3, s1, 64)
 
-    deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
-    cropped_conv3 = Cropping2D(((0, 1), (0, 1)))(conv3) 
-    print(cropped_conv3)
-    uconv3 = concatenate([deconv3, cropped_conv3])
-    uconv3 = Dropout(0.5)(uconv3)
-    uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
-    uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
+    outputs = Conv2D(1, 1, padding="same", activation="sigmoid")(d4)  #Binary (can be multiclass)
 
-    deconv2 = Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
-    cropped_conv2 = Cropping2D(((0, 1), (0, 1)))(conv2)
-    print(cropped_conv2)
-    uconv2 = concatenate([deconv2, cropped_conv2])
-    uconv2 = Dropout(0.5)(uconv2)
-    uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
-    uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
+    model = Model(inputs, outputs, name="U-Net")
 
-    deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
-    cropped_conv1 = Cropping2D(((0, 1), (0, 1)))(conv1) 
-    print(cropped_conv1)
-    uconv1 = concatenate([deconv1, cropped_conv1])
-    uconv1 = Dropout(0.5)(uconv1)
-    uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
-    uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
-    
-    output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
-    
-    return output_layer
+    return model
 
 
-
-## Before using it we need to use a compiler, to optimize it, for example Adam optimizer
-# model = build_unet(input_shape)
-# model.compile(optimizer=Adam(lr = 1e-3), loss='binary_crossentropy', metrics=['accuracy'])
-# model.summary()
