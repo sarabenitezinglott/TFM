@@ -4,12 +4,13 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import os
 import cv2
+import random
 import shutil
 import numpy as np
 import pandas as pd
-from IPython.display import display
 import tensorflow as tf
 import keras_preprocessing
+import matplotlib.pyplot as plt
 from tensorflow import data as tf_data
 from tensorflow import image as tf_image
 from keras.preprocessing.image import ImageDataGenerator
@@ -41,6 +42,7 @@ def create_df(folder):
         df[["Channel", "Copie"]] = df["File_path1"].str.split("/", expand=True)
             # 4. Extraction of copie information for three different columns
         df[["Sample", "Duplicates","Timepoints"]] = df["Copie"].str.extract(r'(\d{4})-(\d{1})[a-z](\d{4})')
+        df["Timepoints"] = df["Timepoints"].astype(int)
             # 5. Cleaning
         df.drop(columns=["File_path1", "Copie"], inplace=True)
             # 6. Label 
@@ -91,6 +93,34 @@ def mask_df(folder):
 def train_valid_split(df_images, df_mask):
     Xtrain, Xtest, Ytrain, Ytest = train_test_split(df_images,df_mask, test_size=0.2, random_state=0)
     return Xtrain, Xtest, Ytrain, Ytest
+
+def plot_training_data(Xtrain, Ytrain):
+    image_number = random.randint(0, len(Xtrain) - 1)
+
+    # Retrieve the file paths to the images
+    X_image_path = Xtrain.iloc[image_number]['File_path']
+    Y_image_path = Ytrain.iloc[image_number]['File_path']
+
+    # Read the images using OpenCV
+    X_image = cv2.imread(X_image_path)
+    Y_image = cv2.imread(Y_image_path)
+
+    # Convert BGR images to RGB for plotting with matplotlib
+    X_image_rgb = cv2.cvtColor(X_image, cv2.COLOR_BGR2RGB)
+    Y_image_rgb = cv2.cvtColor(Y_image, cv2.COLOR_BGR2RGB)
+
+    # Plot the images
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(121)
+    plt.imshow(X_image_rgb)
+    plt.title('Xtrain Image')
+
+    plt.subplot(122)
+    plt.imshow(Y_image_rgb)
+    plt.title('Ytrain Image')
+
+    plt.show()
 
 # 3. Creation of new folders, necesary for ImageDataGenerator image detection
 def createfolders(data_path,folder_names):
@@ -156,8 +186,8 @@ def get_generator(Xtrain_path, Xtest_path, Ytrain_path, Ytest_path):
     return img_generator, valid_img_gen, mask_generator, valid_mask_gen
 
 def combine_generators(image_generator, mask_generator):
-    train_generator = zip(image_generator, mask_generator)
-    for (img, mask) in train_generator:
+    generator = zip(image_generator, mask_generator)
+    for (img, mask) in generator:
         yield (img, mask)
 
  

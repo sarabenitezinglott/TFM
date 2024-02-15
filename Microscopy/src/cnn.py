@@ -240,16 +240,10 @@ def conv_block(input, num_filters):
 
     return x
 
-#Encoder block: Conv block followed by maxpooling
-
-
 def encoder_block(input, num_filters):
     x = conv_block(input, num_filters)
     p = MaxPooling2D((2, 2))(x)
     return x, p   
-
-#Decoder block
-#skip features gets input from encoder for concatenation
 
 def decoder_block(input, skip_features, num_filters):
     x = Conv2DTranspose(num_filters, (2, 2), strides=2, padding="same")(input)
@@ -257,7 +251,6 @@ def decoder_block(input, skip_features, num_filters):
     x = conv_block(x, num_filters)
     return x
 
-#Build Unet using the blocks
 def build_unet(input_shape):
     ''' Input layer'''
     inputs = Input(input_shape)
