@@ -176,19 +176,47 @@ def get_generator(Xtrain_path, Xtest_path, Ytrain_path, Ytest_path):
     batch = 8 
     seed = 24
     image_data_generator = ImageDataGenerator(**img_data_gen_args)
-    img_generator = image_data_generator.flow_from_directory(Xtrain_path, seed = seed, batch_size = batch)
-    valid_img_gen = image_data_generator.flow_from_directory(Xtest_path, seed = seed, batch_size = batch)
-
     mask_data_generator = ImageDataGenerator(**mask_data_gen_args)
-    mask_generator = mask_data_generator.flow_from_directory(Ytrain_path, seed=seed, batch_size = batch)
-    valid_mask_gen = mask_data_generator.flow_from_directory(Ytest_path, seed=seed, batch_size = batch)  #Default batch size 32, if not specified here
+
+    # Images
+    img_generator = image_data_generator.flow_from_directory(Xtrain_path, seed = seed, batch_size = batch,
+                                                             target_size=(928, 928), shuffle= False, 
+                                                             class_mode = None)
+    valid_img_gen = image_data_generator.flow_from_directory(Xtest_path, seed = seed, batch_size = batch,
+                                                             target_size=(928, 928), shuffle= False, 
+                                                             class_mode = None)
+
+    # Masks
+    mask_generator = mask_data_generator.flow_from_directory(Ytrain_path, seed=seed, batch_size = batch,
+                                                             target_size=(928, 928), shuffle= False, 
+                                                             class_mode = None)
+    valid_mask_gen = mask_data_generator.flow_from_directory(Ytest_path, seed=seed, batch_size = batch,
+                                                             target_size=(928, 928), shuffle= False, 
+                                                             class_mode = None)  #Default batch size 32, if not specified here
 
     return img_generator, valid_img_gen, mask_generator, valid_mask_gen
 
+def threshold_mask(X_batch):
+    samples = X_batch.shape[0]
+    X_batch_new = np.zeros((X_batch.shape[0], X_batch.shape[1], X_batch.shape[2], 1), dtype=np.float64)
+
+    for i in range(samples):
+        temp = X_batch[i]
+        temp[temp <= 0.5] = 0.0
+        temp[temp > 0.5] = 1.0
+        X_batch_new[i] = temp
+        print(X_batch_new.shape)
+
+    return X_batch_new
+
+
 def combine_generators(image_generator, mask_generator):
-    generator = zip(image_generator, mask_generator)
-    for (img, mask) in generator:
-        yield (img, mask)
+    while True:
+        yield (image_generator.next(), threshold_mask(mask_generator.next()))
+
+    # generator = zip(image_generator, mask_generator)
+    # for (img, mask) in generator:
+    #     yield (img, mask)
 
  
 # # Once we have the creation of the training and validation folders, and the creation of the rgb subfolders, we can start with the segmentation part
