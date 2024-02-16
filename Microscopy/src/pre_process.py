@@ -132,13 +132,13 @@ def createfolders(data_path,folder_names):
         else: 
             print(f"Folder {folder} already exists at: {folder_path}")
 
-# Move images using shutil library
+    # Move images using shutil library
 def move_images(df, folder_path):
     for _, i in df.iterrows():
         src = i['File_path']
         shutil.copy(src, folder_path)
 
-# Create subfolders for each label, inside of each folder
+# 4. Create subfolders for each label, inside of each folder
 def images_class(df, folder_path):
     for _, i in df.iterrows():
         if i["Channel"] == "red":
@@ -196,6 +196,21 @@ def get_generator(Xtrain_path, Xtest_path, Ytrain_path, Ytest_path):
 
     return img_generator, valid_img_gen, mask_generator, valid_mask_gen
 
+# 6. The above augmentation could have distortioned the masks values. Therefore,
+    # we make a threshold so that the array of pixel values is between 0 and 1. 
+# def threshold_mask(X_batch):
+#     samples = X_batch.shape[0]
+#     X_batch_new = np.zeros((X_batch.shape[0], X_batch.shape[1], X_batch.shape[2], 1), dtype=np.float64)
+
+#     for i in range(samples):
+#         temp = X_batch[i]
+#         temp[temp <= 0.5] = 0.0
+#         temp[temp > 0.5] = 1.0
+#         temp = np.squeeze(temp, axis=-1)
+#         X_batch_new[i] = temp
+
+#     return X_batch_new
+
 def threshold_mask(X_batch):
     samples = X_batch.shape[0]
     X_batch_new = np.zeros((X_batch.shape[0], X_batch.shape[1], X_batch.shape[2], 1), dtype=np.float64)
@@ -204,89 +219,13 @@ def threshold_mask(X_batch):
         temp = X_batch[i]
         temp[temp <= 0.5] = 0.0
         temp[temp > 0.5] = 1.0
+        temp = np.expand_dims(temp[..., 0], axis=-1)  # Collapse the last dimension
         X_batch_new[i] = temp
-        print(X_batch_new.shape)
 
     return X_batch_new
 
 
+# 7. The U-net model only needs one generator. So image and mask generator must be combined. 
 def combine_generators(image_generator, mask_generator):
     while True:
         yield (image_generator.next(), threshold_mask(mask_generator.next()))
-
-    # generator = zip(image_generator, mask_generator)
-    # for (img, mask) in generator:
-    #     yield (img, mask)
-
- 
-# # Once we have the creation of the training and validation folders, and the creation of the rgb subfolders, we can start with the segmentation part
-# # For the segmentation part we need first to select the proposal regions to be the ones that we want, so we need to select them manually (manual annotation) with OpenCV
-
-# def threshold(img, thresh=127, mode='inverse'):
-#     im = img.copy()
-#     if mode == 'direct':
-#         thresh_mode = cv2.THRESH_BINARY
-#     else:
-#         thresh_mode = cv2.THRESH_BINARY_INV
-     
-#     ret, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
-#     return thresh
-
-# def display_image(img, thresh):
-#     display(img, thresh, 
-#         name_l='Original Image', 
-#         name_r='Thresholded Image',
-#         figsize=(20,14))
-
-# def get_bboxes(img):
-#     contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-#     # Sort according to the area of contours in descending order.
-#     sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
-#     # Remove max area, outermost contour.
-#     sorted_cnt.remove(sorted_cnt[0])
-#     bboxes = []
-#     for cnt in sorted_cnt:
-#         x,y,w,h = cv2.boundingRect(cnt)
-#         cnt_area = w * h
-#         bboxes.append((x, y, x+w, y+h))
-#     return bboxes
-
-# def draw_annotations(img, bboxes, thickness=2, color=(0,255,0)):
-#     annotations = img.copy()
-#     for box in bboxes:
-#         tlc = (box[0], box[1])
-#         brc = (box[2], box[3])
-#         cv2.rectangle(annotations, tlc, brc, color, thickness, cv2.LINE_AA)
-#     return annotations
-
-# def morph_op(img, mode='open', ksize=5, iterations=1):
-#     im = img.copy()
-#     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ksize, ksize))
-     
-#     if mode == 'open':
-#         morphed = cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
-#     elif mode == 'close':
-#         morphed = cv2.morphologyEx(im, cv2.MORPH_CLOSE, kernel)
-#     elif mode == 'erode':
-#         morphed = cv2.erode(im, kernel)
-#     else:
-#         morphed = cv2.dilate(im, kernel)
-#     return morphed
-
-# def get_filtered_bboxes(img, min_area_ratio=0.001):
-#     contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-#     # Sort the contours according to area, larger to smaller.
-#     sorted_cnt = sorted(contours, key=cv2.contourArea, reverse = True)
-#     # Remove max area, outermost contour.
-#     sorted_cnt.remove(sorted_cnt[0])
-#     # Container to store filtered bboxes.
-#     bboxes = []
-#     # Image area.
-#     im_area = img.shape[0] * img.shape[1]
-#     for cnt in sorted_cnt:
-#         x,y,w,h = cv2.boundingRect(cnt)
-#         cnt_area = w * h
-#         # Remove very small detections.
-#         if cnt_area > min_area_ratio * im_area:
-#             bboxes.append((x, y, x+w, y+h))
-#     return bboxes
