@@ -8,13 +8,11 @@ import random
 import shutil
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import keras_preprocessing
 import matplotlib.pyplot as plt
 from tensorflow import data as tf_data
 from tensorflow import image as tf_image
 from keras.preprocessing.image import ImageDataGenerator
-from tensorflow import io as tf_io
+from tensorflow import io
 from sklearn.model_selection import train_test_split
 
 # 1. Create dataframes 
@@ -69,22 +67,22 @@ def mask_df(folder):
     # Create df
         # 1. File path
     df1 = pd.DataFrame(list_tiff, columns=["File_path"])
-        # 2. Image ID 
-    df1["Image_id"] = df1["File_path"].str.extract(r'(nuclei_mask_\d*)')
-        # 3. Channel 
+        # 2. Type of image (nuclei, cytoplasm, meiosis)
+    df1["Type"] = df1["File_path"].str.extract(r'(nuclei/)')
+        # 3. Timepoints
+    df1["Timepoint"] =  df1["File_path"].str.extract(r'(\d+)')
+    df1["Image_id"] = df1["Type"] + df1["Timepoint"]
+    df1["Image_id"] = df1["Image_id"].replace("/", "_")
+        # 4. Channel 
     if df1["Image_id"].str.contains("nuclei").any():
         df1["Channel"] = "red"
     elif df1["Image_id"].str.contains("citoplasm").any():
         df1["Channel"] = "green"
     else:
         df1["Channel"] = "blue"
-        # 4. Timepoint
-    df1["Timepoint"] = df1["Image_id"].str.extract(r'(\d+)').astype(int)
         # 5. Label
-    lista = ["red","green", "blue"]
-    for color in lista:
-        df1.loc[df1["Channel"] == color, "Label"] = lista.index(color)
-    df1["Label"] = df1["Label"].astype(int) 
+    label_dict = {'red': 0, 'green': 1, 'blue': 2}
+    df1['Label'] = df1['Channel'].map(label_dict)
     df1.sort_values(by="Timepoint", inplace = True)
     df1 = df1.reset_index(drop = True)
     return df1

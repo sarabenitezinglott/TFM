@@ -1,16 +1,11 @@
 import cv2
-import sys
-import numpy as np
 import czifile
-import skimage
 import tifffile
+import numpy as np
 from tqdm import tqdm
+import concurrent.futures
 from scipy import ndimage as ndi
 from skimage import morphology, filters
-import matplotlib.pyplot as plt
-import concurrent.futures
-import keras
-import tensorflow 
 from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, BatchNormalization
 from keras.models import Model
 
@@ -67,7 +62,7 @@ def mask(path, filetype):
 
                     # 8. Save the mask for each channel in different folders
                     if j == 0: # Red channel --> nuclei mask 
-                        cv2.imwrite(f'c:/Users/saraa/TFM/mask/nuclei/nuclei_mask_{i}.png', erode_uint8)
+                        cv2.imwrite(f'c:/Users/saraa/TFM/mask/nuclei/{i}.png', erode_uint8)
                     
                     progress_bar.update(1)
 
@@ -97,14 +92,14 @@ def mask(path, filetype):
 
                     # 8. Save the mask for each channel in different folders
                     if j == 0: # Red channel --> nuclei mask 
-                        cv2.imwrite(f'c:/Users/saraa/TFM/mask/nuclei/nuclei_mask_{i}.png', erode_uint8)
+                        cv2.imwrite(f'c:/Users/saraa/TFM/mask/nuclei/{i}.png', erode_uint8)
 
                     # elif j == 1: # Green channel --> citoplasm mask
-                    #     cv2.imwrite(f'c:/Users/saraa/TFM/mask/citoplasm/cito_mask_{i}.png', erode_uint8)
+                    #     cv2.imwrite(f'c:/Users/saraa/TFM/mask/citoplasm/{i}.png', erode_uint8)
 
                     # ### Not sure about this mask, shows everything, not just mitosis
                     # else:  # Blue channel --> mitosis mask
-                    #     cv2.imwrite(f'c:/Users/saraa/TFM/mask/meiosis/meiosis_mask_{i}.png', erode_uint8)
+                    #     cv2.imwrite(f'c:/Users/saraa/TFM/mask/meiosis/{i}.png', erode_uint8)
 
                     progress_bar.update(1)
 
@@ -131,24 +126,6 @@ def mask(path, filetype):
 # print('Skimage      :', skimage.__version__)
 # print('Tensorflow   :', tensorflow.__version__)
 
-
-# #### Model hyperparameters 
-# # Learning rate
-# LR = 0.0001
-# # Custom loss function
-# def dice_coef(y_true, y_pred):
-#     smooth = 1.
-#     y_true_f = keras.flatten(y_true)
-#     y_pred_f = keras.flatten(y_pred)
-#     intersection = keras.sum(y_true_f * y_pred_f)
-#     return (2. * intersection + smooth) / (keras.sum(y_true_f) + keras.sum(y_pred_f) + smooth)
-
-# def bce_dice_loss(y_true, y_pred):
-#     return 0.5 * tensorflow.keras.losses.binary_crossentropy(y_true, y_pred) - dice_coef(y_true, y_pred)
-
-# epochs = 25
-# batch = 8
-
 ##### U-NET ARCHITECTURE
 # Maxpooling: It reduces half the image size
 # Concatenation is important in U-Net, if not the segmentation would be imposible,
@@ -161,73 +138,6 @@ def mask(path, filetype):
     # would be the outputs, but the inputs for the next layer.  
 # The encoder blocks consists of a convolutional 2D layer (without batch normalization) 
     # with a maxpooling layer
-    
-# def unet_model(start_neurons):
-    
-#     input_layer = Input((572, 572, 1))
-
-    
-#     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(input_layer)
-#     conv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(conv1)
-#     pool1 = MaxPooling2D((2, 2))(conv1) 
-#     pool1 = Dropout(0.25)(pool1)
-#     print(conv1)
-
-#     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(pool1)
-#     conv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(conv2)
-#     pool2 = MaxPooling2D((2, 2))(conv2)
-#     pool2 = Dropout(0.5)(pool2)
-#     print(conv2)
-
-#     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(pool2)
-#     conv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(conv3)
-#     pool3 = MaxPooling2D((2, 2))(conv3)
-#     pool3 = Dropout(0.5)(pool3)
-#     print(conv3)
-
-#     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(pool3)
-#     conv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(conv4)
-#     pool4 = MaxPooling2D((2, 2))(conv4)
-#     pool4 = Dropout(0.5)(pool4)
-#     print(conv4)
-
-#     ''' Bridge '''
-#     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(pool4)
-#     convm = Conv2D(start_neurons * 16, (3, 3), activation="relu", padding="same")(convm)
-    
-#     ''' Decoder layer or expansion patch'''
-#     deconv4 = Conv2DTranspose(start_neurons * 8, (3, 3), strides=(2, 2), padding="same")(convm)
-#     print(deconv4)
-#     uconv4 = concatenate([deconv4, conv4])
-#     uconv4 = Dropout(0.5)(uconv4)
-#     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
-#     uconv4 = Conv2D(start_neurons * 8, (3, 3), activation="relu", padding="same")(uconv4)
-
-#     deconv3 = Conv2DTranspose(start_neurons * 4, (3, 3), strides=(2, 2), padding="same")(uconv4)
-#     print(deconv3)
-#     uconv3 = concatenate([deconv3, conv3])
-#     uconv3 = Dropout(0.5)(uconv3)
-#     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
-#     uconv3 = Conv2D(start_neurons * 4, (3, 3), activation="relu", padding="same")(uconv3)
-
-#     deconv2 = Conv2DTranspose(start_neurons * 2, (3, 3), strides=(2, 2), padding="same")(uconv3)
-#     print(deconv2)
-#     uconv2 = concatenate([deconv2, conv2])
-#     uconv2 = Dropout(0.5)(uconv2)
-#     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
-#     uconv2 = Conv2D(start_neurons * 2, (3, 3), activation="relu", padding="same")(uconv2)
-
-#     deconv1 = Conv2DTranspose(start_neurons * 1, (3, 3), strides=(2, 2), padding="same")(uconv2)
-#     print(deconv1)
-#     uconv1 = concatenate([deconv1, conv1])
-#     uconv1 = Dropout(0.5)(uconv1)
-#     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
-#     uconv1 = Conv2D(start_neurons * 1, (3, 3), activation="relu", padding="same")(uconv1)
-    
-#     output_layer = Conv2D(1, (1,1), padding="same", activation="sigmoid")(uconv1)
-    
-#     return output_layer
-
 
 def conv_block(input, num_filters):
     x = Conv2D(num_filters, 3, padding="same")(input)
