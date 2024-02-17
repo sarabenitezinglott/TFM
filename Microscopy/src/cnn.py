@@ -1,17 +1,20 @@
+import os
 import cv2
+import random
 import czifile
 import tifffile
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import concurrent.futures
+from keras.models import Model
+import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
 from skimage import morphology, filters
+from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, Concatenate, Activation, BatchNormalization
-from keras.models import Model
 
-#############################################
-### Mask generation for each channel 
-
+# 1. Mask generation for the U-net model 
 
 def mask(path, filetype):
     # Opening image with .czi file extension 
@@ -104,41 +107,25 @@ def mask(path, filetype):
                     progress_bar.update(1)
 
     progress_bar.close()
-        
+    
 
-# def mean_iou(y_true, y_pred):
-#     prec = []
-#     for t in np.arange(0.5, 1.0, 0.05):
-#         y_pred_ = tensorflow.to_int32(y_pred > t)
-#         score, up_opt = tensorflow.metrics.mean_iou(y_true, y_pred_, 2)
-#         keras.get_session().run(tensorflow.local_variables_initializer())
-#         with tensorflow.control_dependencies([up_opt]):
-#             score = tensorflow.identity(score)
-#         prec.append(score)
-#     return keras.mean(keras.stack(prec), axis=0)
+# 2. U-NET model architecture
+''' 
+Maxpooling is needed to reduce half the image size.
+Concatenation is important in U-Net, if not the segmentation would be impossible,
+    also, it would be a normal convolutional neural network. The concatenation means to add 
+    the filters obtained in the previous steps. So features are doubled (the previus one
+    and the new one). 
+To concatenate features, it must be the same lenght the convolutional layer to 
+    the decoder layer.   
+The pooling would be the output for the next layer. So: pool1, pool2, pool3 and pool 4
+    would be the outputs, but the inputs for the next layer.  
+The encoder blocks consists of a convolutional 2D layer (without batch normalization) 
+    with a maxpooling layer 
 
-# IMG_WIDTH       = 256
-# IMG_HEIGHT      = 256
-# IMG_CHANNELS    = 3
-
-# print('Python       :', sys.version.split('\n')[0])
-# print('Numpy        :', np.__version__)
-# print('Skimage      :', skimage.__version__)
-# print('Tensorflow   :', tensorflow.__version__)
-
-##### U-NET ARCHITECTURE
-# Maxpooling: It reduces half the image size
-# Concatenation is important in U-Net, if not the segmentation would be imposible,
-    # also, it would be a normal convolutional neural network. The concatenation means to add 
-    # the filters obtained in the previous steps. So features are doubled (the previus one
-    # and the new one). 
-# To concatenate features, it must be the same lenght the convolutional layer to 
-    # the decoder layer.   
-# The pooling would be the output for the next layer. So: pool1, pool2, pool3 and pool 4
-    # would be the outputs, but the inputs for the next layer.  
-# The encoder blocks consists of a convolutional 2D layer (without batch normalization) 
-    # with a maxpooling layer
-
+''' 
+# To optimice the model, is necessary to make a function foreach block in 
+    # the model. 
 def conv_block(input, num_filters):
     x = Conv2D(num_filters, 3, padding="same")(input)
     x = BatchNormalization()(x)   #Not in the original network. 
@@ -186,4 +173,80 @@ def build_unet(input_shape):
 
     return model
 
+# 3. Model fitting
+    # EalryStopping will stop the training when there is no imporvement in the 
+    # validation loss for three consecutives epochs
+    
+def fitting(model, train_generator, weightpath, tensorboard):
+    # Improving model fitting 
+    checkpoints = ModelCheckpoint(filepath = weightpath, save_weigths_only = True, 
+                                  monitor = 'val_accuracy', mode = 'max', 
+                                  save_best_only = True)
 
+    callbacks = [EarlyStopping(monitor = 'val_loss', patience = 3),
+                TensorBoard(log_dir = tensorboard), checkpoints]
+    
+    steps_per_epoch = 20 # 3*(len(Xtrain))//8
+    history = model.fit(train_generator, steps_per_epoch=steps_per_epoch, 
+                    validation_data=None, validation_steps=None, epochs=1,
+                    callbacks= callbacks, verbose = 1)
+    return history
+
+# 4. Model predicting
+def predict(model, Xtrain, Xtest, Ytrain):
+    # idx = random.randint(0, len(Xtrain))
+    pred_train = model.predict(Xtrain[:int(Xtrain.shape[0]*0.9)], verbose = 1)
+    pred_train_t = (pred_train > 0.5).astype(np.uint8)
+    pred_val = model.predict(Xtrain[int(Xtrain.shape[0]*0.9):], verbose = 1)
+    pred_val_t = (pred_val > 0.5).astype(np.uint8)
+    pred_test = model.predict(Xtest, verbose = 1)
+    pred_test_t = (pred_test > 0.5).astype(np.uint8)
+
+    # Plots on training sample
+    ix = random.randint(0, len(pred_train_t))
+    plt.imshow(Xtrain[ix]) 
+    plt.show()
+    plt.imshow(np.squeeze(Ytrain[ix]))
+    plt.show()
+    plt.imshow(np.squeeze(pred_train_t[ix]))
+    plt.show()
+
+    # Plots on validation sample
+    ix = random.randint(0, len(pred_val_t))
+    plt.imshow(Xtrain[int(Xtrain.shape[0]*0.9):][ix]) 
+    plt.show()
+    plt.imshow(np.squeeze(Ytrain[int(Ytrain.shape[0]*0.9):][ix]))
+    plt.show()
+    plt.imshow(np.squeeze(pred_val_t[ix]))
+    plt.show()
+
+    return pred_train_t, pred_val_t, pred_test_t
+# 5. Count the number of nuclei
+def nuclei_segmentation(folder):
+    results = [] 
+
+    # 1. Opening each mask file
+    for img in os.scandir(folder):
+        img_path = os.path.join(folder, img)
+        image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        # 2. Verify if the image is loaded correctly
+        if image is None:
+            raise ValueError(f"Unable to load image: {img_path}")
+        # 3. Apply again thresholding. so values are 0 or 255. 127 is the
+            #  threshold. Lower than 127 is 0, higher is 255
+        _, binary_image = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
+        
+        # 4. Connected components analysis
+        num_labels, _ = cv2.connectedComponents(binary_image)
+        num_blobs = num_labels - 1
+        
+        results.append({'Image_path': img_path, 'Number of Nuclei': num_blobs})
+    
+    # 5. Creating DataFrame from the results list. 
+    df = pd.DataFrame(results)
+    df["Timepoint"] = df["Image_path"].str.extract(r'(\d+)').astype(int)
+    df.sort_values(by="Timepoint", inplace = True)
+    df.set_index("Timepoint", inplace=True)
+    df.drop(columns=["Image_path"], inplace=True)
+
+    return df
