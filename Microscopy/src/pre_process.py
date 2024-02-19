@@ -1,6 +1,5 @@
 import warnings
 warnings.filterwarnings("ignore")
-
 import numpy as np
 import os
 import cv2
