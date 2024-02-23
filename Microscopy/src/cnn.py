@@ -176,8 +176,7 @@ def build_unet(input_shape):
 # 3. Model fitting
     # EalryStopping will stop the training when there is no imporvement in the 
     # validation loss for three consecutives epochs
-    
-def fitting(model, train_generator, weightpath, tensorboard):
+def fitting(model, train_generator, valid_generator, weightpath, tensorboard):
     # Improving model fitting 
     checkpoints = ModelCheckpoint(filepath = weightpath, save_weigths_only = True, 
                                   monitor = 'val_accuracy', mode = 'max', 
@@ -185,10 +184,9 @@ def fitting(model, train_generator, weightpath, tensorboard):
 
     callbacks = [EarlyStopping(monitor = 'val_loss', patience = 3),
                 TensorBoard(log_dir = tensorboard), checkpoints]
-    
-    steps_per_epoch = 20 # 3*(len(Xtrain))//8
+    steps_per_epoch = 60
     history = model.fit(train_generator, steps_per_epoch=steps_per_epoch, 
-                    validation_data=None, validation_steps=None, epochs=1,
+                    validation_data = valid_generator, validation_steps=6, epochs = 3,
                     callbacks= callbacks, verbose = 1)
     return history
 
@@ -221,6 +219,7 @@ def predict(model, Xtrain, Xtest, Ytrain):
     plt.show()
 
     return pred_train_t, pred_val_t, pred_test_t
+
 # 5. Count the number of nuclei
 def nuclei_segmentation(folder):
     results = [] 
