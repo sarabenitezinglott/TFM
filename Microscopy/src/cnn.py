@@ -184,9 +184,9 @@ def fitting(model, train_generator, valid_generator, weightpath, tensorboard):
 
     callbacks = [EarlyStopping(monitor = 'val_loss', patience = 3),
                 TensorBoard(log_dir = tensorboard), checkpoints]
-    steps_per_epoch = 60
+    steps_per_epoch = 40
     history = model.fit(train_generator, steps_per_epoch=steps_per_epoch, 
-                    validation_data = valid_generator, validation_steps=6, epochs = 3,
+                    validation_data = valid_generator, validation_steps=6, epochs = 2,
                     callbacks= callbacks, verbose = 1)
     return history
 
