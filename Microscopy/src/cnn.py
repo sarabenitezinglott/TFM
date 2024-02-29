@@ -189,9 +189,9 @@ def fitting(model, train_generator, valid_generator, weightpath, tensorboard):
 
     callbacks = [EarlyStopping(monitor = 'val_loss', patience = 3),
                 TensorBoard(log_dir = tensorboard), checkpoints]
-    steps_per_epoch = 60
-    history = model.fit(train_generator, steps_per_epoch=steps_per_epoch, 
-                    validation_data = valid_generator, validation_steps=6, epochs = 4,
+    steps_per_epoch = 16
+    history = model.fit(train_generator, steps_per_epoch=steps_per_epoch,
+                    validation_data = valid_generator, validation_steps=6, epochs = 2,
                     callbacks= callbacks, verbose = 1)
     return history
 
@@ -328,5 +328,3 @@ class UNet(nn.Module):
         output = self.final_conv(d4)
 
         return torch.sigmoid(output)
-
-

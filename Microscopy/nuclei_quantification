@@ -1,0 +1,248 @@
+from src import visualization as vis
+from src import pre_process
+from src import cnn
+
+import matplotlib.pyplot as plt
+from IPython.display import display
+from keras.optimizers import Adam
+import warnings
+warnings.filterwarnings("ignore")
+#alejandro.gutierrez@sdggroup.com
+
+# 0. Microscope stack visualization
+def napari():
+    vis.visualize_images("D:/TFM/Microscopy/video/3288-1.czi")
+    vis.napari_view_splited_channels()
+
+napari()
+
+# 1. Creation of dataframes for each channel independently and all together
+blue_df, green_df, red_df, df = pre_process.create_df("D:/TFM/Microscopy/video/copies/channels/")
+red = red_df.drop(columns = ["Sample", "Duplicates"])
+
+def save_df(df_list, path_list, index = True):
+    for df, path in zip(df_list, path_list): 
+        df.to_csv(path, index = index)
+        print(f'Dataframe has been saved to {path}')
+
+df_list = [blue_df, green_df, red_df, df]
+path_list = ["C:/Users/saraa/TFM/Microscopy/data/blue","C:/Users/saraa/TFM/Microscopy/data/green", "C:/Users/saraa/TFM/Microscopy/data/red","C:/Users/saraa/TFM/Microscopy/data/rgb"]
+save_df(df_list, path_list)
+
+
+# 2. Generate masks for each microscopy image stack 
+def masks_df(input_stack, type, output_df):
+    cnn.mask(input_stack, type)
+    # 3. Generate mask dataframe
+    maskdf = pre_process.mask_df(output_df)
+    return maskdf
+
+input_stack = "D:\\TFM\\Microscopy\\video\\3288-1-AP-OP.czi"
+type = "czi"
+output_df = 'C:/Users/saraa/TFM/mask/nuclei/'
+nucleiM = masks_df(input_stack, type, output_df)
+
+# 4. Save information obtained 
+df_list = [nucleiM]
+path_list = ["C:/Users/saraa/TFM/Microscopy/data/nucleiM"]
+save_df(df_list, path_list)
+
+# 5. Split the images in train and validation dataset based on the created dataframes 
+Xtrain, Xtest, Ytrain, Ytest = pre_process.train_valid_split(red, nucleiM)
+pre_process.plot_training_data(Xtrain, Ytrain)
+
+# 6. Create tran and valiadation folders. Move images to their main folders
+def split_shutil_train_val():
+    # 1. Creating folders 
+    data_path = "D:/TFM/Microscopy/video/copies/img/"
+    folder_names= ["train_folder", "val_folder"]
+    pre_process.createfolders(data_path,folder_names)
+
+    data_path = "D:/TFM/Microscopy/video/copies/masks/"
+    folder_names= ["train_folder", "val_folder"]
+    pre_process.createfolders(data_path,folder_names)
+    
+    # 2. Splitting images data
+    import shutil
+    dfs = [Xtrain, Xtest]
+    paths = ["D:/TFM/Microscopy/video/copies/img/train_folder/", "D:/TFM/Microscopy/video/copies/img/val_folder/"]
+    for path, df in zip(paths, dfs):
+        try: 
+            pre_process.move_images(df, path)
+        except shutil.Error:
+            print(f"The files already exist in the destination path: {path}")
+    
+    # 3. Splitting masks data
+    dfs = [Ytrain, Ytest]
+    paths = ["D:/TFM/Microscopy/video/copies/masks/train_folder/", "D:/TFM/Microscopy/video/copies/masks/val_folder/"]
+    for path, df in zip(paths, dfs):
+        try: 
+            pre_process.move_images(df, path)
+        except shutil.Error:
+            print(f"The files already exist in the destination path: {path}")  
+
+# split_shutil_train_val()
+            
+# 7. Create label folders. Move images to their respective folders
+def create_shutil_labels():
+    # 1. Creating folders 
+    train_path = "D:/TFM/Microscopy/video/copies/img/train_folder"
+    val_path = "D:/TFM/Microscopy/video/copies/img/val_folder"
+    # folder_names= ["red", "green", "blue"]
+    folder_names= ["red"]
+    pre_process.createfolders(train_path,folder_names)
+    pre_process.createfolders(val_path,folder_names)
+
+    train_path = "D:/TFM/Microscopy/video/copies/masks/train_folder"
+    val_path = "D:/TFM/Microscopy/video/copies/masks/val_folder"
+    # folder_names= ["red", "green", "blue"]
+    folder_names= ["red"]
+    pre_process.createfolders(train_path,folder_names)
+    pre_process.createfolders(val_path,folder_names)
+    
+    # 2. Creating labels for training and testing data
+    Xtrain["new_file_path"] = "D:/TFM/Microscopy/video/copies/img/train_folder/" + Xtrain["Image_id"] + ".tif"
+    Xtrain["new_file_path"] = Xtrain["new_file_path"].astype(str)
+    Xtest["new_file_path"] = "D:/TFM/Microscopy/video/copies/img/val_folder/" + Xtest["Image_id"] + ".tif"
+    Xtest["new_file_path"] = Xtest["new_file_path"].astype(str)
+    
+    Ytrain["new_file_path"] = "D:/TFM/Microscopy/video/copies/masks/train_folder/" + Ytrain["Timepoint"] + ".png"
+    Ytrain["new_file_path"] = Ytrain["new_file_path"].astype(str)
+    Ytest["new_file_path"] = "D:/TFM/Microscopy/video/copies/masks/val_folder/" + Ytest["Timepoint"] + ".png"
+    Ytest["new_file_path"] = Ytest["new_file_path"].astype(str)
+    
+    # 3. Save dataframe
+    Xtrain.to_csv("C:/Users/saraa/TFM/Microscopy/data/img_training", index = True)
+    Xtest.to_csv("C:/Users/saraa/TFM/Microscopy/data/img_testing", index = True)
+    Ytrain.to_csv("C:/Users/saraa/TFM/Microscopy/data/mask_training", index = True)
+    Ytest.to_csv("C:/Users/saraa/TFM/Microscopy/data/mask_testing", index = True)
+
+    # 4. Splitting data for images 
+    img_train_path_red = "D:/TFM/Microscopy/video/copies/img/train_folder/red"
+    # train_path_green = "D:/TFM/Microscopy/video/copies/train_folder/green"
+    # train_path_blue = "D:/TFM/Microscopy/video/copies/train_folder/blue"
+    pre_process.images_class(Xtrain, img_train_path_red)    
+
+    img_val_path_red = "D:/TFM/Microscopy/video/copies/img/val_folder/red"
+    # val_path_green = "D:/TFM/Microscopy/video/copies/val_folder/green"
+    # val_path_blue = "D:/TFM/Microscopy/video/copies/val_folder/blue"
+    pre_process.images_class(Xtest, img_val_path_red)
+
+    # 5. Splitting data for masks
+    mask_train_path_red = "D:/TFM/Microscopy/video/copies/masks/train_folder/red"
+    # train_path_green = "D:/TFM/Microscopy/video/copies/train_folder/green"
+    # train_path_blue = "D:/TFM/Microscopy/video/copies/train_folder/blue"
+    pre_process.images_class(Ytrain, mask_train_path_red)    
+
+    mask_val_path_red = "D:/TFM/Microscopy/video/copies/masks/val_folder/red"
+    # val_path_green = "D:/TFM/Microscopy/video/copies/val_folder/green"
+    # val_path_blue = "D:/TFM/Microscopy/video/copies/val_folder/blue"
+    pre_process.images_class(Ytest, mask_val_path_red)
+
+# create_shutil_labels()    
+    
+# 8. Create generators for model 
+img_train_path = "D:/TFM/Microscopy/video/copies/img/train_folder/"
+img_val_path = "D:/TFM/Microscopy/video/copies/img/val_folder/"
+mask_train_path = "D:/TFM/Microscopy/video/copies/masks/train_folder/"
+mask_val_path = "D:/TFM/Microscopy/video/copies/masks/val_folder/"
+
+img_gen, valid_img_gen, mask_gen, valid_mask_gen = pre_process.get_generator(img_train_path, img_val_path, 
+                                                                             mask_train_path, mask_val_path)
+
+# 9. Combine image and mask for train generators
+train_generator =  pre_process.combine_generators(img_gen, mask_gen)
+valid_generator = pre_process.combine_generators(valid_img_gen, valid_mask_gen)
+
+######################################################################
+# USE GPU FOR A BETTER MODEL TIME RUN --> SEARCH FOR MODEL OPTIMIZATION 
+import tensorflow as tf
+physical_devices = tf.config.list_physical_devices("GPU")
+
+if physical_devices:
+  # Create 2 virtual GPUs with 1GB memory each
+  try:
+    tf.config.set_logical_device_configuration(
+        physical_devices[0],
+        [tf.config.LogicalDeviceConfiguration(memory_limit=1024),
+         tf.config.LogicalDeviceConfiguration(memory_limit=1024)])
+    logical_gpus = tf.config.list_logical_devices('GPU')
+    print(len(physical_devices), "Physical GPU,", len(logical_gpus), "Logical GPUs")
+  except RuntimeError as e:
+    # Virtual devices must be set before GPUs have been initialized
+    print(e)
+strategy = tf.distribute.MirroredStrategy(logical_gpus)
+print(strategy)
+
+######################################################################
+
+# 10. UNet MODEL 
+def UNETensorflow():
+    config = tf.compat.v1.ConfigProto()
+    config.gpu_options.allow_growth = True  # Allow GPU memory growth
+    run_opts = tf.compat.v1.RunOptions(report_tensor_allocations_upon_oom = True)
+
+    strategy = tf.distribute.MirroredStrategy(logical_gpus)
+    with strategy.scope():
+   
+    # 1. Initialize the model 
+        input_shape = (480, 480, 3) # Height and Weight has to be multiples of 16
+                                    # Also three channels, because the CNN expects an 
+                                    # RGB image 
+        model = cnn.build_unet(input_shape)
+
+        # 2. See model architecture
+        model.compile(optimizer = Adam(lr = 1e-3), loss='binary_crossentropy', 
+                      metrics=['accuracy'])
+        model.summary()
+
+        # 3. Train the model and save weights. 
+        path = "C:/Users/saraa/model_for_nuclei.h5"
+        tensorboard = "logs"
+
+        print("Training the model...")
+        history = cnn.fitting(model, train_generator, valid_generator, weightpath= path, 
+                              tensorboard= tensorboard)
+
+        print("Evaluating the model...")
+        # 4. Model perform evaluation 
+        loss = history.history["loss"]
+        val_loss = history.history["val_loss"]
+        epochs = range(1, len(loss) + 1)
+        plt.plot(epochs, loss, "y", label="Training loss")
+        plt.plot(epochs, val_loss, "r", label="Validation loss")
+        plt.title("Training and validation loss")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+        acc = history.history["accuracy"]
+        val_acc = history.history["val_accuracy"]
+        plt.plot(epochs, acc, "y", label="Training acc")
+        plt.plot(epochs, val_acc, "r", label="Validation acc")
+        plt.title("Training and validation accuracy")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.show()
+
+        import numpy as np
+        from keras.preprocessing import image
+        from PIL import ImageOps
+        val_pred = model.predict(valid_generator)
+
+        def display_mask(i):
+            mask = np.argmax(val_pred[i], axis=-1)
+            mask = np.expand_dims(mask, axis = -1)
+            img = ImageOps.autocontrast(image.arra_to_img(mask))
+            display(img)
+
+        i = 10
+        display_mask(i)
+
+UNETensorflow()
+
+# 11. Count the number of nuclei of each image result from the UNet 
+nuclei_df = cnn.nuclei_segmentation("C:\\Users\\saraa\\TFM\\mask\\nuclei\\")
+nuclei_df

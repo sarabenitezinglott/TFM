@@ -177,18 +177,18 @@ def get_generator(Xtrain_path, Xtest_path, Ytrain_path, Ytest_path):
 
     # Images
     img_generator = image_data_generator.flow_from_directory(Xtrain_path, seed = seed, batch_size = batch,
-                                                             target_size=(928, 928), shuffle= False, 
+                                                             target_size=(480, 480), shuffle= False, 
                                                              class_mode = None)
     valid_img_gen = image_data_generator.flow_from_directory(Xtest_path, seed = seed, batch_size = batch,
-                                                             target_size=(928, 928), shuffle= False, 
+                                                             target_size=(480, 480), shuffle= False, 
                                                              class_mode = None)
 
     # Masks
     mask_generator = mask_data_generator.flow_from_directory(Ytrain_path, seed=seed, batch_size = batch,
-                                                             target_size=(928, 928), shuffle= False, 
+                                                             target_size=(480, 480), shuffle= False, 
                                                              class_mode = None)
     valid_mask_gen = mask_data_generator.flow_from_directory(Ytest_path, seed=seed, batch_size = batch,
-                                                             target_size=(928, 928), shuffle= False, 
+                                                             target_size=(480, 480), shuffle= False, 
                                                              class_mode = None)  #Default batch size 32, if not specified here
 
     return img_generator, valid_img_gen, mask_generator, valid_mask_gen
@@ -226,3 +226,5 @@ def threshold_mask(X_batch):
 def combine_generators(image_generator, mask_generator):
     while True:
         yield (image_generator.next(), threshold_mask(mask_generator.next()))
+
+

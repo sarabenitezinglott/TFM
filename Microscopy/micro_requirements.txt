@@ -1,5 +1,18 @@
 #import the necessary libraries for microscopy 
+os
+random
+numpy 
+pandas
+shutil
+matplotlib
+czifile
+tifffile
+tqdm
+scipy
+skimage
 opencv-python 
 scikit-image 
-numpy 
-czifile
+tensorflow==2.15.0
+tensorflow-gpu==2.10.0
+sklearn
+

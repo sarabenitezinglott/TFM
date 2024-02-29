@@ -23,4 +23,3 @@ def napari_view_splited_channels():
         display(Image(i, width = 500))
 
 
-        
