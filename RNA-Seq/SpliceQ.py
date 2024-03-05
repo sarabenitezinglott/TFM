@@ -9,8 +9,7 @@ print(bam.header)
 align = next(bam)
 print(align)
 # 4. Loop inside bam to get all the information
-for alignment in bam:
-    print(alignment.reference_name, alignment.pos)
+
 
 
 
